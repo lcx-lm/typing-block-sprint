@@ -91,10 +91,21 @@
       <div class="lb-wrap" id="homeLb"></div>
     </div>
 
+    <div class="panel trend-panel">
+      <div class="panel-head">
+        <div class="panel-title">最近表现</div>
+        <span class="panel-sub" id="trendSum"></span>
+      </div>
+      <div class="trend-wrap" id="homeTrend"></div>
+    </div>
+
     <div class="panel wb-panel">
       <div class="panel-head">
         <div class="panel-title">错词本</div>
-        <button class="text-btn" id="clearWrongBtn">清空</button>
+        <div class="wb-actions">
+          <button class="text-btn" id="reviewWrongBtn">复习错词</button>
+          <button class="text-btn" id="clearWrongBtn">清空</button>
+        </div>
       </div>
       <div class="wb-list" id="homeWrong"></div>
       <div class="wb-note" id="homeWrongNote">打错的单词会自动收集，对局中优先出现</div>

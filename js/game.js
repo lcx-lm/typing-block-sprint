@@ -9,19 +9,21 @@
 
   /* ---------------- 难度参数（严格按需求） ----------------
      AI 参数：aiSpawnInterval 出块间隔、aiCps 每秒敲字符数、
-     aiReact 读词反应区间（秒）、aiError 每词失误概率。
+     aiReact 读词反应区间（秒）、aiError 每词失误概率、aiSkip 每词走神概率。
      这些值让 AI 像普通玩家一样有反应、有失误，而不是匀速刷分。
+     aiSkip 让 AI 偶尔整词漏看，方块正常下落并触底扣心，
+     这样“AI 爱心碎完”这条终点才真正可达。
      ------------------------------------------------ */
   var DIFFS = {
     easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8,
               aiSpawnInterval: 6200, aiCps: 1.8, aiReact: [1.5, 2.0], aiError: 0.22,
-              desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+              aiSkip: 0.20, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
     normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0,
               aiSpawnInterval: 5500, aiCps: 2.6, aiReact: [1.0, 1.5], aiError: 0.18,
-              desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+              aiSkip: 0.12, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
     hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3,
               aiSpawnInterval: 4500, aiCps: 3.6, aiReact: [0.6, 1.0], aiError: 0.10,
-              desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+              aiSkip: 0.06, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   // 双跑道每条只有半屏宽，限制最长词，避免长词挤出跑道
@@ -82,6 +84,7 @@
     lives: LIVES_MAX,
     combo: 0,
     maxCombo: 0,
+    wordsCleared: 0,
     correctChars: 0,
     errorCount: 0,
     elapsedMs: 0,
@@ -404,6 +407,28 @@
     renderHUD();
   }
 
+  // 消除飘字：在方块位置向上飘出本次得分，连击 ≥2 时附带连击数
+  function spawnScorePop(b, gain, combo) {
+    var host = laneElFor(b.owner);
+    if (!host) return;
+
+    var pop = document.createElement('div');
+    pop.className = 'score-pop' + (b.owner === 'ai' ? ' is-ai' : '');
+    pop.textContent = '+' + gain;
+
+    if (combo >= 2) {
+      var tag = document.createElement('span');
+      tag.className = 'pop-combo';
+      tag.textContent = '×' + combo;
+      pop.appendChild(tag);
+    }
+
+    pop.style.left = (b.x + b.w / 2) + 'px';
+    pop.style.top = Math.max(0, b.y + 4) + 'px';
+    host.appendChild(pop);
+    setTimeout(function () { removeBlockEl(pop); }, 900);
+  }
+
   function destroyBlock(b) {
     var idx = G.blocks.indexOf(b);
     if (idx === -1) return;
@@ -421,9 +446,11 @@
     var gain = Math.floor(b.word.length * 10 * coef * (1 + G.combo * 0.1));
     G.score += gain;
     G.levelScore += gain;
+    G.wordsCleared++;
 
     G.input = '';
 
+    spawnScorePop(b, gain, G.combo);
     beep(620 + Math.min(G.combo, 10) * 45, 0.07, 'triangle', 0.045);
 
     // 只有单机闯关才有关卡目标；冲刺与 AI 对战不自动过关
@@ -599,7 +626,8 @@
     var list = [];
     for (var i = 0; i < G.blocks.length; i++) {
       var b = G.blocks[i];
-      if (b.owner === 'ai' && !b.dead) list.push(b);
+      // 已被 AI 走神漏掉的词不再重新拾取，让它自然落地扣心
+      if (b.owner === 'ai' && !b.dead && !b.aiSkipped) list.push(b);
     }
     if (!list.length) return null;
     list.sort(function (a, b) { return b.y - a.y; });
@@ -616,6 +644,7 @@
     ai.typed = '';
     ai.charAcc = 0;
     ai.stunUntil = nowSec() + 1.3;
+    ai.stunReason = '掉块停顿';
     ai.reactUntil = 0;
     ai.state = '掉块停顿';
 
@@ -645,6 +674,7 @@
     var coef = DIFFS[G.diffKey].coef;
     var gain = Math.floor(b.word.length * 10 * coef * (1 + ai.combo * 0.1));
     G.aiScore += gain;
+    spawnScorePop(b, gain, ai.combo);
 
     ai.target = null;
     ai.typed = '';
@@ -663,11 +693,12 @@
       return;
     }
 
-    // 掉块后的停顿
+    // 掉块 / 走神后的停顿
     if (now < ai.stunUntil) {
-      ai.state = '掉块停顿';
+      ai.state = ai.stunReason || '掉块停顿';
       return;
     }
+    ai.stunReason = '';
 
     // 目标被消除或掉落后重新选择
     if (ai.target && (ai.target.dead || G.blocks.indexOf(ai.target) === -1)) {
@@ -685,6 +716,23 @@
       }
 
       var cfg = DIFFS[G.diffKey];
+
+      // 小概率“走神”：整词漏看，方块继续下落，落地会扣 AI 爱心。
+      // 这让“AI 爱心碎完”不再是不可能事件。
+      if (Math.random() < cfg.aiSkip) {
+        next.aiSkipped = true;
+        if (next.el) next.el.classList.add('is-missed');
+        ai.target = null;
+        ai.typed = '';
+        ai.charAcc = 0;
+        ai.reactUntil = 0;
+        ai.stunUntil = now + 2.4 + Math.random() * 1.4;
+        ai.stunReason = '走神';
+        ai.state = '走神';
+        ai.combo = 0;
+        return;
+      }
+
       ai.target = next;
       ai.typed = '';
       ai.charAcc = 0;
@@ -906,7 +954,7 @@
   function start(setKey, diffKey, startLevel, reviewWords, mode) {
     if (!WORD_SETS[setKey]) setKey = 'cet4';
     if (!DIFFS[diffKey]) diffKey = 'normal';
-    if (mode !== 'sprint' && mode !== 'versus') mode = 'solo';
+    if (mode !== 'sprint' && mode !== 'versus' && mode !== 'review') mode = 'solo';
 
     // 先彻底清理上一局残留
     stopLoop();
@@ -926,6 +974,7 @@
       charAcc: 0,
       reactUntil: 0,
       stunUntil: 0,
+      stunReason: '',
       mistakeUntil: 0,
       state: '等待'
     };
@@ -937,6 +986,7 @@
     G.lives = LIVES_MAX;
     G.combo = 0;
     G.maxCombo = 0;
+    G.wordsCleared = 0;
     G.correctChars = 0;
     G.errorCount = 0;
     G.elapsedMs = 0;
@@ -954,6 +1004,19 @@
     if (mode === 'solo') {
       G.levels = buildLevels(setKey, diffKey);
       startIdx = Math.max(0, Math.min(G.levels.length - 1, (parseInt(startLevel, 10) || 1) - 1));
+    } else if (mode === 'review') {
+      // 错词复习：词池换成错词本，60 秒单局，不设关卡目标
+      var reviewPool = G.reviewPool.length
+        ? G.reviewPool.slice()
+        : WORD_SETS[setKey].words.slice();
+      G.levels = [{
+        index: 1,
+        pool: reviewPool,
+        wordsNeeded: 0,
+        target: Infinity,
+        timeLimit: MODE_TIME
+      }];
+      startIdx = 0;
     } else {
       // 冲刺 / AI 对战：整库词池单局 60 秒，不设关卡目标
       G.levels = [{
@@ -1041,6 +1104,7 @@
       accuracy: calcAccuracy(),
       wpm: calcWpm(),
       maxCombo: G.maxCombo,
+      wordsCleared: G.wordsCleared,
       wrongWords: G.wrongWords.slice(),
       setKey: G.setKey,
       diffKey: G.diffKey,

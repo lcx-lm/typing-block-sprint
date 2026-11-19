@@ -19,7 +19,8 @@
     levelProgress: {},
     wrongBook: {},
     rankPoints: 0,
-    rankRecord: { wins: 0, losses: 0, draws: 0 }
+    rankRecord: { wins: 0, losses: 0, draws: 0 },
+    history: []
   };
 
   // 选择页当前选中项
@@ -90,6 +91,11 @@
       losses: Math.max(0, parseInt(rr && rr.losses, 10) || 0),
       draws: Math.max(0, parseInt(rr && rr.draws, 10) || 0)
     };
+
+    var hist = ST.getJSON('history', []);
+    DATA.history = Array.isArray(hist) ? hist.filter(function (h) {
+      return h && typeof h === 'object' && typeof h.score === 'number';
+    }).slice(-20) : [];
   }
 
   /* ---------------- 关卡解锁进度 ----------------
@@ -193,6 +199,12 @@
       note.textContent = set
         ? '当前词库：' + set.name + ' · 共 ' + list.length + ' 个错词，对局中优先出现'
         : '打错的单词会自动收集，对局中优先出现';
+    }
+
+    // 复习入口按钮：显示当前词库的错词数量，空时给出提示
+    var reviewBtn = document.getElementById('reviewWrongBtn');
+    if (reviewBtn) {
+      reviewBtn.textContent = list.length ? '复习错词（' + list.length + '）' : '复习错词';
     }
   }
 
@@ -431,6 +443,7 @@
     UI.updateHomeStats(DATA.bestScore, DATA.bestWpm);
     updateRankChip();
     UI.renderLeaderboard(UI.els.homeLb, DATA.leaderboard, 5);
+    UI.renderTrend(UI.els.homeTrend, DATA.history);
     renderWrongBook();
   }
 
@@ -583,9 +596,10 @@
     if (levelSection) levelSection.hidden = !solo;
 
     if (banner) {
-      banner.textContent = solo
-        ? '单机闯关 · 逐关解锁'
-        : (picked.mode === 'sprint' ? '限时冲刺 · 60 秒整库词池' : 'AI 对战 · 60 秒同场抢分');
+      if (solo) banner.textContent = '单机闯关 · 逐关解锁';
+      else if (picked.mode === 'sprint') banner.textContent = '限时冲刺 · 60 秒整库词池';
+      else if (picked.mode === 'review') banner.textContent = '错词复习 · 60 秒错词池';
+      else banner.textContent = 'AI 对战 · 60 秒同场抢分';
     }
 
     if (diffNote) {
@@ -597,7 +611,9 @@
     if (solo) {
       updateLevelNote();
     } else if (btn) {
-      btn.textContent = picked.mode === 'sprint' ? '开始冲刺' : '开始对战';
+      if (picked.mode === 'sprint') btn.textContent = '开始冲刺';
+      else if (picked.mode === 'review') btn.textContent = '开始复习';
+      else btn.textContent = '开始对战';
     }
   }
 
@@ -610,6 +626,11 @@
   }
 
   function launchGame() {
+    var words = wrongList(picked.setKey);
+    if (picked.mode === 'review' && !words.length) {
+      UI.toast('错词本是空的，先玩一局收集错词');
+      return;
+    }
     runBaseCleared = picked.mode === 'solo' ? clearedLevels(picked.setKey, picked.diffKey) : 0;
     lastConfig = {
       setKey: picked.setKey,
@@ -617,7 +638,7 @@
       level: picked.level,
       mode: picked.mode
     };
-    Game.start(picked.setKey, picked.diffKey, picked.level, wrongList(picked.setKey), picked.mode);
+    Game.start(picked.setKey, picked.diffKey, picked.level, words, picked.mode);
   }
 
   /* ---------------- 排位积分 ---------------- */
@@ -693,29 +714,43 @@
     };
 
     // 段位积分先结算，保持与结算页展示一致
-    var outcome = calcRankOutcome(stats, mode);
-    var afterRank = applyRankResult(outcome.delta, outcome.result);
+    var isReview = mode === 'review';
+    var outcome = isReview ? { delta: 0, result: 'none', bonus: 0 } : calcRankOutcome(stats, mode);
+    var afterRank = isReview ? rankOf(DATA.rankPoints) : applyRankResult(outcome.delta, outcome.result);
 
-    var isNewRecord = stats.score > DATA.bestScore;
+    var isNewRecord = !isReview && stats.score > DATA.bestScore;
 
     if (isNewRecord) {
       DATA.bestScore = stats.score;
       ST.set('bestScore', DATA.bestScore);
     }
-    if (stats.wpm > DATA.bestWpm) {
+    if (!isReview && stats.wpm > DATA.bestWpm) {
       DATA.bestWpm = stats.wpm;
       ST.set('bestWpm', DATA.bestWpm);
     }
 
-    // 写入排行榜
-    DATA.leaderboard.push({
-      name: DATA.nickname,
-      score: stats.score,
-      wpm: stats.wpm,
-      accuracy: stats.accuracy,
-      date: formatDate(new Date())
-    });
-    saveLeaderboard();
+    // 写入排行榜（错词复习不参与排名）
+    if (!isReview) {
+      DATA.leaderboard.push({
+        name: DATA.nickname,
+        score: stats.score,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        date: formatDate(new Date())
+      });
+      saveLeaderboard();
+
+      // 成绩历史：仅保留最近 20 局，用于首页趋势图
+      DATA.history.push({
+        score: stats.score,
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        mode: mode,
+        date: formatDate(new Date())
+      });
+      if (DATA.history.length > 20) DATA.history = DATA.history.slice(-20);
+      ST.setJSON('history', DATA.history);
+    }
 
     // 结算页数据
     document.getElementById('resScore').textContent = stats.score;
@@ -726,7 +761,11 @@
     // 结算状态：按模式区分文案
     var status = document.getElementById('resStatus');
     var winView;
-    if (mode === 'sprint') {
+    if (mode === 'review') {
+      status.textContent = '错词复习 · 60 秒打掉 ' + stats.wordsCleared + ' 个错词' +
+        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
+      winView = stats.failReason !== 'lives';
+    } else if (mode === 'sprint') {
       status.textContent = '限时冲刺 · 60 秒得分 ' + stats.score +
         (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
       winView = outcome.delta > 0;
@@ -764,14 +803,19 @@
 
     // 段位积分变化
     var rankEl = document.getElementById('resRank');
-    rankEl.textContent = '段位积分 ' + (outcome.delta > 0 ? '+' : '') + outcome.delta +
-      ' · 当前 ' + afterRank.name + '（' + DATA.rankPoints + ' 分）';
-    rankEl.classList.toggle('up', outcome.delta > 0);
-    rankEl.classList.toggle('down', outcome.delta < 0);
+    if (isReview) {
+      rankEl.textContent = '错词复习不计段位积分';
+      rankEl.classList.remove('up', 'down');
+    } else {
+      rankEl.textContent = '段位积分 ' + (outcome.delta > 0 ? '+' : '') + outcome.delta +
+        ' · 当前 ' + afterRank.name + '（' + DATA.rankPoints + ' 分）';
+      rankEl.classList.toggle('up', outcome.delta > 0);
+      rankEl.classList.toggle('down', outcome.delta < 0);
+    }
 
-    // 破纪录标记：两种状态都给明确文案
+    // 破纪录标记：两种状态都给明确文案（复习局不参与记录）
     var recBadge = document.getElementById('resNew');
-    recBadge.hidden = false;
+    recBadge.hidden = isReview;
     recBadge.textContent = isNewRecord ? '破纪录' : '未破纪录';
     recBadge.classList.toggle('plain', !isNewRecord);
 
@@ -909,8 +953,11 @@
         '<ul>' +
           '<li><b>单机闯关</b>：逐关解锁，每关 50 秒，达到目标分过关</li>' +
           '<li><b>限时冲刺</b>：整库词池单局 60 秒，不设关卡，冲击最高分</li>' +
-          '<li><b>AI 对战</b>：左右双跑道各 60 秒。AI 会读词、逐字输入并偶尔打错；任一方 3 颗爱心碎完即判负，一方分数占比达到 <b>70%</b> 并保持 <b>3</b> 秒可压制获胜，否则时间到按比分判定</li>' +
+          '<li><b>AI 对战</b>：左右双跑道各 60 秒。AI 会读词、逐字输入、偶尔打错，也会小概率走神整词漏看；任一方 3 颗爱心碎完即判负，一方分数占比达到 <b>70%</b> 并保持 <b>3</b> 秒可压制获胜，否则时间到按比分判定</li>' +
+          '<li><b>错词复习</b>：从错词本首页点击「复习错词」，用当前词库的错词打一局 60 秒，不参与排名与段位积分</li>' +
         '</ul>' +
+        '<p><b>成绩趋势</b></p>' +
+        '<p>首页「最近表现」记录最近 20 局得分，并画出最近 10 局的走势，可用来观察自己是否在进步。</p>' +
         '<p><b>段位积分</b></p>' +
         '<p>每局结束按胜负增减积分；点击首页段位旁的「!」可查看当前段位、积分进度与完整规则。</p>' +
         '<p><b>操作</b></p>' +
@@ -1042,6 +1089,7 @@
         DATA.wrongBook = {};
         DATA.rankPoints = 0;
         DATA.rankRecord = { wins: 0, losses: 0, draws: 0 };
+        DATA.history = [];
         picked.level = 1;
         picked.mode = 'solo';
         Game.setSound(true);
@@ -1087,6 +1135,23 @@
     document.getElementById('helpBtn').addEventListener('click', openHelp);
     document.getElementById('viewAllBtn').addEventListener('click', openLeaderboard);
 
+    // 错词本：直接以当前词库的错词开一局 60 秒复习
+    document.getElementById('reviewWrongBtn').addEventListener('click', function () {
+      var words = wrongList(picked.setKey);
+      if (!words.length) {
+        UI.toast('当前词库还没有错词，先玩一局收集');
+        return;
+      }
+      runBaseCleared = 0;
+      lastConfig = {
+        setKey: picked.setKey,
+        diffKey: picked.diffKey,
+        level: 1,
+        mode: 'review'
+      };
+      Game.start(picked.setKey, picked.diffKey, 1, words, 'review');
+    });
+
     // 错词本：只清空当前选中词库的记录
     document.getElementById('clearWrongBtn').addEventListener('click', function () {
       var list = wrongList(picked.setKey);
@@ -1122,9 +1187,13 @@
     // 结算页
     document.getElementById('againBtn').addEventListener('click', function () {
       var mode = lastConfig.mode || 'solo';
+      var words = wrongList(lastConfig.setKey);
+      if (mode === 'review' && !words.length) {
+        UI.toast('错词本已清空，无法再来一局');
+        return;
+      }
       runBaseCleared = mode === 'solo' ? clearedLevels(lastConfig.setKey, lastConfig.diffKey) : 0;
-      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level,
-        wrongList(lastConfig.setKey), mode);
+      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level, words, mode);
     });
 
     document.getElementById('changeSetBtn').addEventListener('click', function () {

@@ -73,6 +73,9 @@
       e.homeBest = document.getElementById('homeBest');
       e.homeBestWpm = document.getElementById('homeBestWpm');
       e.homeLb = document.getElementById('homeLb');
+      e.homeTrend = document.getElementById('homeTrend');
+      e.trendSum = document.getElementById('trendSum');
+      this._combo = 0;
     },
 
     /* ---------------- 主题 ---------------- */
@@ -108,10 +111,21 @@
       e.hudTime.textContent = d.time + 's';
       e.hudTime.classList.toggle('is-low', d.time <= 10);
       e.hudCombo.textContent = d.combo;
+
+      // 连击动效：连击增加时弹一下，≥5 连进入高亮态
+      var combo = typeof d.combo === 'number' ? d.combo : 0;
+      if (combo > (this._combo || 0) && combo > 0) {
+        e.hudCombo.classList.remove('is-bump');
+        void e.hudCombo.offsetWidth;
+        e.hudCombo.classList.add('is-bump');
+      }
+      e.hudCombo.classList.toggle('is-hot', combo >= 5);
+      this._combo = combo;
+
       e.hudInput.textContent = d.input ? d.input : '—';
 
-      // 单机闯关显示关卡与目标；冲刺 / AI 对战隐藏，只保留分数与倒计时
-      var solo = d.mode !== 'sprint' && d.mode !== 'versus';
+      // 单机闯关显示关卡与目标；冲刺 / AI 对战 / 错词复习隐藏
+      var solo = d.mode === 'solo';
       if (e.hudLevelItem) e.hudLevelItem.hidden = !solo;
       if (e.hudTargetItem) e.hudTargetItem.hidden = !solo;
       if (e.hudAiItem) e.hudAiItem.hidden = d.mode !== 'versus';
@@ -259,6 +273,84 @@
       });
       table.appendChild(tbody);
       container.appendChild(table);
+    },
+
+    /* ---------------- 成绩趋势 ---------------- */
+    renderTrend: function (container, list) {
+      if (!container) return;
+      container.innerHTML = '';
+
+      var data = (list || []).slice(-10);
+      if (data.length < 2) {
+        var empty = document.createElement('div');
+        empty.className = 'trend-empty';
+        empty.textContent = data.length ? '再玩一局就能看到走势' : '还没有成绩记录，先来一局吧';
+        container.appendChild(empty);
+        if (this.els.trendSum) this.els.trendSum.textContent = '';
+        return;
+      }
+
+      var max = -Infinity;
+      var min = Infinity;
+      var total = 0;
+      data.forEach(function (d) {
+        var s = d.score || 0;
+        if (s > max) max = s;
+        if (s < min) min = s;
+        total += s;
+      });
+
+      var span = Math.max(1, max - min);
+      var W = 300;
+      var H = 78;
+      var PAD = 8;
+      var step = (W - PAD * 2) / (data.length - 1);
+      var pts = data.map(function (d, i) {
+        var x = PAD + i * step;
+        var y = PAD + (1 - ((d.score || 0) - min) / span) * (H - PAD * 2);
+        return [x, y];
+      });
+
+      var NS = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+      svg.setAttribute('class', 'trend-svg');
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', '最近 ' + data.length + ' 局得分走势');
+
+      // 折线下方的面积
+      var dPath = 'M ' + pts[0][0].toFixed(1) + ' ' + (H - PAD);
+      pts.forEach(function (p) {
+        dPath += ' L ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+      });
+      dPath += ' L ' + pts[pts.length - 1][0].toFixed(1) + ' ' + (H - PAD) + ' Z';
+      var area = document.createElementNS(NS, 'path');
+      area.setAttribute('d', dPath);
+      area.setAttribute('class', 'trend-area');
+      svg.appendChild(area);
+
+      var line = document.createElementNS(NS, 'polyline');
+      line.setAttribute('points', pts.map(function (p) {
+        return p[0].toFixed(1) + ',' + p[1].toFixed(1);
+      }).join(' '));
+      line.setAttribute('class', 'trend-line');
+      svg.appendChild(line);
+
+      pts.forEach(function (p, i) {
+        var dot = document.createElementNS(NS, 'circle');
+        dot.setAttribute('cx', p[0].toFixed(1));
+        dot.setAttribute('cy', p[1].toFixed(1));
+        dot.setAttribute('r', i === pts.length - 1 ? 3.4 : 2);
+        dot.setAttribute('class', i === pts.length - 1 ? 'trend-dot is-last' : 'trend-dot');
+        svg.appendChild(dot);
+      });
+
+      container.appendChild(svg);
+
+      if (this.els.trendSum) {
+        this.els.trendSum.textContent = '近 ' + data.length + ' 局 · 最高 ' + max +
+          ' · 平均 ' + Math.round(total / data.length);
+      }
     },
 
     /* ---------------- 弹窗 ---------------- */
