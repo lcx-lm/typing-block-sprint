@@ -2,6 +2,8 @@
 
 《人工智能导论》期末大作业（路线 B：小游戏）。
 
+代码仓库：https://github.com/lcx-lm/typing-block-sprint
+
 纯前端单机闯关游戏：方块携带英文单词下落，玩家逐字母敲出完整单词即可消除得分。每关限时冲击目标分，达标后进入下一关；每关 3 颗爱心，爱心碎完或时间用完则本局结束。
 
 ## 运行方式
@@ -73,7 +75,9 @@
   js/main.js            入口：数据读写、页面路由、事件绑定、结算落库
   README.md             本文件
   docs/
-    AI使用声明模板.md    AI 使用声明模板（提交前需填写）
+    项目说明.md          选题理由、目标用户、功能结构、使用方法与局限
+    AI使用声明.md        AI 使用声明（已按实际使用情况填写）
+    自测清单.md          功能与边界用例的自测记录
 ```
 
 脚本按 `words → storage → ui → game → main` 顺序以普通 `<script>` 标签加载，无模块依赖。
@@ -88,6 +92,8 @@
 - `typingBlock_leaderboard`
 - `typingBlock_settings`
 - `typingBlock_helpSeen`
+- `typingBlock_guideSeen`
+- `typingBlock_levelProgress`
 
 浏览器禁用本地存储时自动降级为内存存储，并提示一次"刷新后会丢失"。
 
@@ -110,7 +116,8 @@
 | 作业要求 | 本仓库 |
 | --- | --- |
 | 源码与可运行包 | 本目录，双击 `index.html` |
-| 项目说明文档 | `README.md` |
-| AI 使用声明 | `docs/AI使用声明模板.md`（需按实际使用情况填写） |
+| 项目说明文档 | `README.md` 与 `docs/项目说明.md` |
+| AI 使用声明 | `docs/AI使用声明.md` |
+| 自测记录 | `docs/自测清单.md` |
 | 演示录屏 | 待录制（建议 2–5 分钟，覆盖首页→对局→结算） |
 | 答辩材料 | 待制作（建议 3–5 页） |
