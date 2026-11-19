@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字块冲刺 · 英文打字闯关小游戏</title>
+<script>
+  // 首屏先应用主题，避免暗色用户看到亮色闪烁
+  (function () {
+    try {
+      var saved = JSON.parse(localStorage.getItem('typingBlock_settings') || '{}');
+      document.documentElement.setAttribute('data-theme', saved && saved.theme === 'dark' ? 'dark' : 'light');
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-state="HOME">
+
+<div class="app">
+  <!-- ==================== 顶部栏 ==================== -->
+  <header class="topbar">
+    <div class="brand-row">
+      <div class="brand">
+        <i class="brand-mark"></i>
+        <span class="brand-name">字块冲刺</span>
+        <span class="brand-sub">英文打字闯关</span>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="settingsBtn" title="设置" aria-label="设置">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="helpBtn" title="帮助" aria-label="帮助">?</button>
+      </div>
+    </div>
+
+    <div class="user-strip">
+      <button class="nick-btn" id="nickBtn" title="点击修改昵称">
+        <span class="nick-cap">昵称</span><b id="nickLabel">玩家</b>
+      </button>
+      <span class="user-chip rank"><span class="chip-cap">段位</span><b>青铜</b></span>
+      <span class="user-chip"><span class="chip-cap">最高分</span><b id="homeBest">0</b></span>
+      <span class="user-chip"><span class="chip-cap">最佳 WPM</span><b id="homeBestWpm">0</b></span>
+    </div>
+  </header>
+
+  <!-- ==================== HOME ==================== -->
+  <section class="screen is-active" id="screen-home">
+    <div class="mode-section">
+      <div class="section-title">选择模式</div>
+      <div class="mode-grid">
+        <button class="mode-card" id="modeSolo">
+          <div class="mode-main">
+            <div class="mode-name">单机闯关</div>
+            <div class="mode-desc">选词库、选难度，一局定胜负</div>
+          </div>
+          <div class="mode-tag on">可游玩</div>
+        </button>
+        <button class="mode-card is-disabled" disabled>
+          <div class="mode-main">
+            <div class="mode-name">限时冲刺</div>
+            <div class="mode-desc">60 秒内冲击最高分</div>
+          </div>
+          <div class="mode-tag">后续版本</div>
+        </button>
+        <button class="mode-card is-disabled" disabled>
+          <div class="mode-main">
+            <div class="mode-name">AI 对战</div>
+            <div class="mode-desc">与 AI 抢词对拼</div>
+          </div>
+          <div class="mode-tag">后续版本</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel lb-panel">
+      <div class="panel-head">
+        <div class="panel-title">排行榜 · Top 5</div>
+        <button class="text-btn" id="viewAllBtn">查看全部</button>
+      </div>
+      <div class="lb-wrap" id="homeLb"></div>
+    </div>
+  </section>
+
+  <!-- ==================== SELECT ==================== -->
+  <section class="screen" id="screen-select">
+    <div class="select-head">
+      <div class="section-title">选择词库</div>
+      <div class="section-note">默认四级，每套词库均为自建示例</div>
+    </div>
+    <div class="card-grid" id="setGrid"></div>
+
+    <div class="select-head" style="margin-top:18px">
+      <div class="section-title">选择难度</div>
+      <div class="section-note">难度决定下落速度、出块间隔与单词长度上限</div>
+    </div>
+    <div class="card-grid diff-grid" id="diffGrid"></div>
+
+    <div class="select-head" style="margin-top:18px">
+      <div class="section-title">选择关卡</div>
+      <div class="section-note" id="levelNote">共 50 关，第 1 关已解锁</div>
+    </div>
+    <div class="level-grid" id="levelGrid"></div>
+
+    <div class="select-actions">
+      <button class="btn ghost" id="backHomeBtn">返回首页</button>
+      <button class="btn primary" id="startGameBtn">开始游戏</button>
+    </div>
+  </section>
+
+  <!-- ==================== PLAYING ==================== -->
+  <section class="screen" id="screen-play">
+    <div class="hud">
+      <div class="hud-item"><span>分数</span><b id="hudScore">0</b></div>
+      <div class="hud-item"><span>关卡</span><b id="hudLevel">1 / 6</b></div>
+      <div class="hud-item"><span>本关目标</span><b id="hudTarget">0 / 100</b></div>
+      <div class="hud-item hud-time"><span>剩余时间</span><b id="hudTime">50s</b></div>
+      <div class="hud-item hud-hp">
+        <span>生命</span>
+        <div class="hearts" id="hudHearts" aria-label="剩余生命 3 颗">
+          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+          </svg>
+          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+          </svg>
+          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="hud-item"><span>连击</span><b id="hudCombo">0</b></div>
+      <div class="hud-item hud-input"><span>当前输入</span><b id="hudInput">—</b></div>
+      <button class="btn ghost small" id="pauseBtn">暂停 Esc</button>
+    </div>
+
+    <div class="game-area" id="gameArea">
+      <div class="pause-mask" id="pauseMask">
+        <div class="pause-card">
+          <div class="pause-title">已暂停</div>
+          <div class="pause-note">点击继续，或按 Esc</div>
+          <button class="btn primary" id="resumeBtn">继续游戏</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="play-hint">
+      点击页面任意处聚焦键盘 · <b>Esc</b> 暂停 · <b>Backspace</b> 清空当前输入 · 请使用<b>英文输入法</b>
+    </div>
+  </section>
+
+  <!-- ==================== RESULT ==================== -->
+  <section class="screen" id="screen-result">
+    <div class="panel result-panel">
+      <div class="result-head">
+        <div class="section-title">本局结算</div>
+        <span class="record-badge" id="resNew" hidden>破纪录</span>
+      </div>
+      <div class="result-status" id="resStatus">第 1 / 6 关</div>
+      <div class="result-grid">
+        <div class="res-item"><span>本局得分</span><b id="resScore">0</b></div>
+        <div class="res-item"><span>准确率</span><b id="resAcc">100%</b></div>
+        <div class="res-item"><span>WPM</span><b id="resWpm">0</b></div>
+        <div class="res-item"><span>最高连击</span><b id="resCombo">0</b></div>
+      </div>
+      <div class="wrong-block">
+        <div class="wrong-title">本局打错的单词</div>
+        <div class="wrong-list" id="resWrong"></div>
+      </div>
+      <div class="result-actions">
+        <button class="btn primary" id="againBtn">再来一局</button>
+        <button class="btn ghost" id="changeSetBtn">换词库</button>
+        <button class="btn ghost" id="resultHomeBtn">返回首页</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ==================== 首次进入引导 ==================== -->
+<div class="guide-layer" id="guideLayer" hidden>
+  <!-- WELCOME：昵称输入 -->
+  <div class="guide-mask" id="welcomeMask" hidden>
+    <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+      <div class="welcome-eyebrow">字块冲刺 · 新手报到</div>
+      <h1 class="welcome-title" id="welcomeTitle">欢迎来到字块冲刺</h1>
+      <p class="welcome-note">先给自己起个昵称，排行榜和成绩会记在这个名字下。</p>
+
+      <label class="welcome-label" for="welcomeInput">你的昵称</label>
+      <input class="welcome-input" id="welcomeInput" type="text" maxlength="12" value="玩家"
+             autocomplete="off" spellcheck="false">
+      <div class="welcome-err" id="welcomeErr" hidden>昵称不能为空，也不能全是空格</div>
+
+      <button class="btn primary welcome-btn" id="welcomeStart" type="button">开始体验</button>
+      <div class="welcome-tip">最多 12 个字符，之后可在右上角随时修改</div>
+    </div>
+  </div>
+
+  <!-- GUIDE：对话式新手引导 -->
+  <div class="guide-mask" id="guideMask" hidden>
+    <div class="guide-card" role="dialog" aria-modal="true">
+      <button class="guide-skip" id="guideSkip" type="button">跳过引导</button>
+
+      <div class="guide-visual" aria-hidden="true">
+        <div class="gv-block">
+          <div class="gv-word"><b>typ</b>ing</div>
+          <div class="gv-meaning">打字</div>
+        </div>
+        <div class="gv-hp"><i></i></div>
+        <div class="gv-ground"></div>
+      </div>
+
+      <div class="guide-head">
+        <div class="guide-avatar" aria-hidden="true">字</div>
+        <div class="guide-meta">
+          <div class="guide-name">引导员</div>
+          <div class="guide-step" id="guideStepText">1 / 7</div>
+        </div>
+      </div>
+
+      <div class="guide-bubble">
+        <p class="guide-text" id="guideText"></p>
+      </div>
+
+      <div class="guide-foot">
+        <div class="guide-dots" id="guideDots" aria-hidden="true"></div>
+        <button class="btn primary" id="guideNext" type="button">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 红闪 / 提示 / 弹窗容器 -->
+<div class="flash" id="flash"></div>
+<div class="toast" id="toast"></div>
+<div class="modal-root" id="modalRoot"></div>
+
+<script src="js/words.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
