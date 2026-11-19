@@ -7,12 +7,33 @@
 (function (global) {
   'use strict';
 
-  /* ---------------- 难度参数（严格按需求） ---------------- */
+  /* ---------------- 难度参数（严格按需求） ----------------
+     AI 参数：aiSpawnInterval 出块间隔、aiCps 每秒敲字符数、
+     aiReact 读词反应区间（秒）、aiError 每词失误概率。
+     这些值让 AI 像普通玩家一样有反应、有失误，而不是匀速刷分。
+     ------------------------------------------------ */
   var DIFFS = {
-    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 18, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
-    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 24, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
-    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 30, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8,
+              aiSpawnInterval: 5200, aiCps: 2.2, aiReact: [1.2, 1.7], aiError: 0.12,
+              desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0,
+              aiSpawnInterval: 3900, aiCps: 3.2, aiReact: [0.8, 1.2], aiError: 0.08,
+              desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3,
+              aiSpawnInterval: 3000, aiCps: 4.4, aiReact: [0.45, 0.8], aiError: 0.05,
+              desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
+
+  // 双跑道每条只有半屏宽，限制最长词，避免长词挤出跑道
+  var VERSE_MAX_WORD = 9;
+  // AI 连击加成上限，避免机器一路滚雪球
+  var AI_COMBO_CAP = 8;
+  // 拔河条：70% 压制、保持 3 秒、15 秒后且总分 400 才启用
+  var VERSE_KO_SHARE = 0.70;
+  var VERSE_KO_RELEASE = 0.65;   // 回落到 65% 以下才解除压制读秒
+  var VERSE_KO_HOLD = 3;
+  var VERSE_ACTIVE_TIME = 15;
+  var VERSE_ACTIVE_SCORE = 400;
 
   /* ---------------- 生命与数值 ----------------
      生命为 3 颗爱心：方块触底碎掉 1 颗，碎完本局结束。
@@ -39,6 +60,8 @@
   };
 
   var areaEl = null;
+  var lanePlayerEl = null;
+  var laneAiEl = null;
 
   var G = {
     state: 'HOME',
@@ -48,7 +71,11 @@
     diffKey: 'normal',
     mode: 'solo',
     aiScore: 0,
-    aiRate: 24,
+    ai: null,
+    versusShare: 0.5,
+    versusSide: '',
+    versusHold: 0,
+    versusWinner: null,
     score: 0,
     lives: LIVES_MAX,
     combo: 0,
@@ -136,7 +163,12 @@
       levelTarget: G.levelTarget,
       time: Math.ceil(G.levelTime),
       mode: G.mode,
-      aiScore: Math.round(G.aiScore)
+      aiScore: Math.round(G.aiScore),
+      aiLives: G.ai ? G.ai.lives : LIVES_MAX,
+      aiState: G.ai ? G.ai.state : '等待',
+      versusShare: G.versusShare,
+      versusSide: G.versusSide,
+      versusHold: G.versusHold
     });
   }
 
@@ -208,42 +240,53 @@
     return el;
   }
 
-  function spawnBlock() {
+  // 双跑道时按归属取容器；单机 / 冲刺仍用整个游戏区
+  function laneElFor(owner) {
+    if (G.mode !== 'versus') return areaEl;
+    return owner === 'ai' ? laneAiEl : lanePlayerEl;
+  }
+
+  function spawnBlock(owner) {
+    owner = owner === 'ai' ? 'ai' : 'player';
+
     var lv = G.levels[G.levelIndex];
     var pool = lv ? lv.pool : WORD_SETS[G.setKey].words;
     var maxLen = DIFFS[G.diffKey].maxLen;
+    if (G.mode === 'versus') maxLen = Math.min(maxLen, VERSE_MAX_WORD);
 
     // 按难度过滤单词长度；若过滤后为空则回退整库，保证不会没有方块
     var filtered = pool.filter(function (w) { return w.word.length <= maxLen; });
     if (!filtered.length) filtered = pool;
 
-    // 尽量避免同屏重复单词
+    // 尽量避免同屏重复单词（两条跑道一起算）
     var onScreen = G.blocks.map(function (b) { return b.word; });
 
-    // 错词本中的词有更高概率优先出现
-    var review = G.reviewPool.filter(function (w) {
-      return w && w.word && w.word.length <= maxLen && onScreen.indexOf(w.word) === -1;
-    });
+    var avail = null;
+    // 错词本只影响玩家跑道
+    if (owner === 'player') {
+      var review = G.reviewPool.filter(function (w) {
+        return w && w.word && w.word.length <= maxLen && onScreen.indexOf(w.word) === -1;
+      });
+      if (review.length && Math.random() < 0.35) avail = review;
+    }
 
-    var avail;
-    if (review.length && Math.random() < 0.35) {
-      avail = review;
-    } else {
+    if (!avail) {
       avail = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
       if (!avail.length) avail = filtered;
     }
 
     var item = avail[Math.floor(Math.random() * avail.length)];
+    var host = laneElFor(owner);
 
     var el = createBlockEl(item.word, item.meaning);
     el.style.left = '0px';
     el.style.top = '0px';
     el.style.visibility = 'hidden';
-    areaEl.appendChild(el);
+    host.appendChild(el);
 
     var w = el.offsetWidth;
     var h = el.offsetHeight;
-    var areaW = areaEl.clientWidth;
+    var areaW = host.clientWidth;
     var maxX = Math.max(0, areaW - w - 12);
     var x = 6 + Math.random() * maxX;
 
@@ -252,6 +295,7 @@
 
     var block = {
       id: ++G.seq,
+      owner: owner,
       word: item.word,
       meaning: item.meaning,
       el: el,
@@ -279,7 +323,6 @@
 
   function moveBlocks(dt) {
     var speed = DIFFS[G.diffKey].fallSpeed;
-    var areaH = areaEl.clientHeight;
 
     // 倒序遍历，便于安全删除
     for (var i = G.blocks.length - 1; i >= 0; i--) {
@@ -288,6 +331,9 @@
 
       var b = G.blocks[i];
       if (!b || b.dead) continue;
+
+      var host = laneElFor(b.owner);
+      var areaH = host ? host.clientHeight : areaEl.clientHeight;
 
       b.y += speed * dt;
       b.el.style.top = b.y + 'px';
@@ -307,6 +353,7 @@
     var input = G.input;
     for (var i = 0; i < G.blocks.length; i++) {
       var b = G.blocks[i];
+      if (b.owner === 'ai') continue;
       var match = !!input && b.word.indexOf(input) === 0;
       for (var j = 0; j < b.spans.length; j++) {
         b.spans[j].classList.toggle('on', match && j < input.length);
@@ -319,11 +366,16 @@
     var candidates = [];
     var i;
     for (i = 0; i < G.blocks.length; i++) {
+      if (G.blocks[i].owner === 'ai') continue;
       if (G.input && G.blocks[i].word.indexOf(G.input) === 0) {
         candidates.push(G.blocks[i]);
       }
     }
-    if (!candidates.length) candidates = G.blocks.slice();
+    if (!candidates.length) {
+      for (i = 0; i < G.blocks.length; i++) {
+        if (G.blocks[i].owner !== 'ai') candidates.push(G.blocks[i]);
+      }
+    }
     if (!candidates.length) return null;
     candidates.sort(function (a, b) { return b.y - a.y; });
     return candidates[0];
@@ -513,6 +565,12 @@
     b.el.classList.add('drop');
     setTimeout(function () { removeBlockEl(b.el); }, 260);
 
+    // AI 跑道掉块：扣 AI 爱心并停顿，不再是无敌机器
+    if (b.owner === 'ai') {
+      aiGroundHit();
+      return;
+    }
+
     G.lives -= 1;
     G.combo = 0;
 
@@ -522,11 +580,181 @@
     renderHUD();
     if (G.lives <= 0) {
       G.lives = 0;
+      if (G.mode === 'versus') G.versusWinner = 'ai';
       G.failReason = 'lives';
       endGame();
       return;
     }
     updateHighlights();
+  }
+
+  /* ---------------- AI 对手（拟人打字） ---------------- */
+  function nowSec() {
+    return G.elapsedMs / 1000;
+  }
+
+  function pickAiBlock() {
+    var list = [];
+    for (var i = 0; i < G.blocks.length; i++) {
+      var b = G.blocks[i];
+      if (b.owner === 'ai' && !b.dead) list.push(b);
+    }
+    if (!list.length) return null;
+    list.sort(function (a, b) { return b.y - a.y; });
+    return list[0];
+  }
+
+  function aiGroundHit() {
+    var ai = G.ai;
+    if (!ai) return;
+
+    ai.lives = Math.max(0, ai.lives - 1);
+    ai.combo = 0;
+    ai.target = null;
+    ai.typed = '';
+    ai.charAcc = 0;
+    ai.stunUntil = nowSec() + 1.3;
+    ai.reactUntil = 0;
+    ai.state = '掉块停顿';
+
+    beep(100, 0.18, 'sawtooth', 0.04);
+    renderHUD();
+
+    if (ai.lives <= 0) {
+      G.versusWinner = 'player';
+      G.failReason = 'aiLives';
+      endGame();
+    }
+  }
+
+  function aiCompleteBlock(b) {
+    var idx = G.blocks.indexOf(b);
+    if (idx === -1) return;
+    G.blocks.splice(idx, 1);
+    b.dead = true;
+
+    b.el.classList.add('boom');
+    setTimeout(function () { removeBlockEl(b.el); }, 320);
+
+    var ai = G.ai;
+    ai.combo = Math.min(ai.combo + 1, AI_COMBO_CAP);
+    if (ai.combo > ai.maxCombo) ai.maxCombo = ai.combo;
+
+    var coef = DIFFS[G.diffKey].coef;
+    var gain = Math.floor(b.word.length * 10 * coef * (1 + ai.combo * 0.1));
+    G.aiScore += gain;
+
+    ai.target = null;
+    ai.typed = '';
+    ai.charAcc = 0;
+    ai.reactUntil = 0;
+
+    beep(480 + Math.min(ai.combo, AI_COMBO_CAP) * 35, 0.05, 'sine', 0.03);
+    renderHUD();
+  }
+
+  function updateAI(dt, now) {
+    var ai = G.ai;
+    if (!ai) return;
+    if (ai.lives <= 0) {
+      ai.state = '已崩溃';
+      return;
+    }
+
+    // 掉块后的停顿
+    if (now < ai.stunUntil) {
+      ai.state = '掉块停顿';
+      return;
+    }
+
+    // 目标被消除或掉落后重新选择
+    if (ai.target && (ai.target.dead || G.blocks.indexOf(ai.target) === -1)) {
+      ai.target = null;
+      ai.typed = '';
+      ai.charAcc = 0;
+    }
+
+    if (!ai.target) {
+      var next = pickAiBlock();
+      if (!next) {
+        ai.state = '等待';
+        return;
+      }
+
+      var cfg = DIFFS[G.diffKey];
+      ai.target = next;
+      ai.typed = '';
+      ai.charAcc = 0;
+      ai.reactUntil = now + cfg.aiReact[0] +
+        Math.random() * (cfg.aiReact[1] - cfg.aiReact[0]);
+
+      // 每个词有一定概率“打错”：多停顿一下并清空连击
+      if (Math.random() < cfg.aiError) {
+        ai.reactUntil += 0.5 + Math.random() * 0.6;
+        ai.mistakeUntil = ai.reactUntil;
+        ai.combo = 0;
+      } else {
+        ai.mistakeUntil = 0;
+      }
+      ai.state = '读词中';
+      return;
+    }
+
+    // 读词 / 打错停顿
+    if (now < ai.reactUntil) {
+      ai.state = now < ai.mistakeUntil ? '打错了' : '读词中';
+      return;
+    }
+
+    // 按每秒字符数逐字推进
+    var target = ai.target;
+    ai.charAcc += dt * DIFFS[G.diffKey].aiCps;
+    while (ai.charAcc >= 1 && ai.typed.length < target.word.length) {
+      ai.charAcc -= 1;
+      ai.typed += target.word.charAt(ai.typed.length);
+    }
+
+    for (var i = 0; i < target.spans.length; i++) {
+      target.spans[i].classList.toggle('on', i < ai.typed.length);
+    }
+
+    ai.state = '输入中';
+    if (ai.typed === target.word) aiCompleteBlock(target);
+  }
+
+  // 拔河条：按分数占比推进，70% 且保持 3 秒直接压制获胜
+  function updateVersusBar(dt) {
+    var total = G.score + G.aiScore;
+    var target = total > 0 ? G.score / total : 0.5;
+    G.versusShare += (target - G.versusShare) * Math.min(1, dt * 6);
+
+    var active = G.elapsedMs >= VERSE_ACTIVE_TIME * 1000 && total >= VERSE_ACTIVE_SCORE;
+    var side = '';
+    var keepPlayer = G.versusSide === 'player' && G.versusShare >= VERSE_KO_RELEASE;
+    var keepAi = G.versusSide === 'ai' && G.versusShare <= 1 - VERSE_KO_RELEASE;
+    if (active && (keepPlayer || G.versusShare >= VERSE_KO_SHARE)) side = 'player';
+    else if (active && (keepAi || G.versusShare <= 1 - VERSE_KO_SHARE)) side = 'ai';
+
+    if (side && side === G.versusSide) {
+      G.versusHold += dt;
+    } else {
+      G.versusSide = side;
+      G.versusHold = side ? dt : 0;
+    }
+
+    if (G.versusHold >= VERSE_KO_HOLD) {
+      G.versusWinner = side;
+      G.failReason = 'ko';
+      endGame();
+    }
+  }
+
+  function decideVersusByScore() {
+    if (G.mode !== 'versus' || G.versusWinner) return;
+    var aiScore = Math.round(G.aiScore);
+    if (G.score > aiScore) G.versusWinner = 'player';
+    else if (G.score < aiScore) G.versusWinner = 'ai';
+    else G.versusWinner = 'draw';
   }
 
   function handleKeydown(e) {
@@ -575,9 +803,10 @@
 
     var next = G.input + ch;
 
-    // 只要有一个方块以 next 为前缀，就接受这次输入
+    // 只要有一个玩家方块以 next 为前缀，就接受这次输入
     var hasPrefix = false;
     for (var i = 0; i < G.blocks.length; i++) {
+      if (G.blocks[i].owner === 'ai') continue;
       if (G.blocks[i].word.indexOf(next) === 0) { hasPrefix = true; break; }
     }
 
@@ -592,6 +821,7 @@
     // 完整命中：优先消除最靠下（y 最大）的那个
     var exact = [];
     for (var j = 0; j < G.blocks.length; j++) {
+      if (G.blocks[j].owner === 'ai') continue;
       if (G.blocks[j].word === next) exact.push(G.blocks[j]);
     }
 
@@ -618,12 +848,13 @@
     if (!G.paused && !G.transitioning) {
       G.elapsedMs += dt * 1000;
 
-      // 限时：时间到即本局失败
+      // 限时：时间到即本局结束
       G.levelTime -= dt;
       if (G.levelTime <= 0) {
         G.levelTime = 0;
         renderHUD();
         G.failReason = 'time';
+        decideVersusByScore();
         endGame();
         return;
       }
@@ -632,15 +863,30 @@
       var gap = DIFFS[G.diffKey].spawnInterval;
       if (G.spawnAcc >= gap) {
         G.spawnAcc -= gap;
-        spawnBlock();
+        spawnBlock('player');
       }
 
-      // AI 对手按难度速率抢分，带 ±20% 随机抖动
+      // AI 跑道独立出块
       if (G.mode === 'versus') {
-        G.aiScore += G.aiRate * dt * (0.8 + Math.random() * 0.4);
+        G.ai.spawnAcc += dt * 1000;
+        var aiGap = DIFFS[G.diffKey].aiSpawnInterval;
+        if (G.ai.spawnAcc >= aiGap) {
+          G.ai.spawnAcc -= aiGap;
+          spawnBlock('ai');
+        }
       }
 
       moveBlocks(dt);
+      if (G.state !== 'PLAYING') return;
+
+      if (G.mode === 'versus') {
+        // AI 拟人打字 + 拔河条压制判定
+        updateAI(dt, G.elapsedMs / 1000);
+        if (G.state !== 'PLAYING') return;
+        updateVersusBar(dt);
+        if (G.state !== 'PLAYING') return;
+      }
+
       renderHUD();
     }
 
@@ -661,7 +907,23 @@
     G.diffKey = diffKey;
     G.mode = mode;
     G.aiScore = 0;
-    G.aiRate = DIFFS[diffKey].aiRate;
+    G.ai = {
+      lives: LIVES_MAX,
+      combo: 0,
+      maxCombo: 0,
+      spawnAcc: 0,
+      target: null,
+      typed: '',
+      charAcc: 0,
+      reactUntil: 0,
+      stunUntil: 0,
+      mistakeUntil: 0,
+      state: '等待'
+    };
+    G.versusShare = 0.5;
+    G.versusSide = '';
+    G.versusHold = 0;
+    G.versusWinner = null;
     G.score = 0;
     G.lives = LIVES_MAX;
     G.combo = 0;
@@ -703,6 +965,12 @@
     global.UI.showScreen('PLAYING');
     global.UI.setPauseMask(false);
     beginLevel(startIdx);
+
+    // 对战开局先给 AI 一块，避免右侧空等几秒
+    if (mode === 'versus') {
+      spawnBlock('ai');
+      renderHUD();
+    }
 
     getCtx(); // 借用户点击手势解锁音频上下文
     G.raf = global.requestAnimationFrame(loop);
@@ -756,6 +1024,9 @@
     G.paused = false;
     global.UI.setPauseMask(false);
 
+    // 对战兜底：没有显式胜者时按比分判定
+    decideVersusByScore();
+
     var stats = {
       score: G.score,
       accuracy: calcAccuracy(),
@@ -766,6 +1037,8 @@
       diffKey: G.diffKey,
       mode: G.mode,
       aiScore: Math.round(G.aiScore),
+      aiLives: G.ai ? G.ai.lives : 0,
+      versusWinner: G.versusWinner,
       elapsedMs: G.elapsedMs,
       levelIndex: G.levelIndex + 1,
       levelTotal: G.levels.length,
@@ -806,6 +1079,8 @@
 
     init: function () {
       areaEl = document.getElementById('gameArea');
+      lanePlayerEl = document.getElementById('lanePlayer');
+      laneAiEl = document.getElementById('laneAi');
 
       document.addEventListener('keydown', handleKeydown);
 

@@ -7,6 +7,25 @@
 (function (global) {
   'use strict';
 
+  // 双跑道里的迷你爱心，固定 3 颗
+  function fillMiniHearts(box) {
+    if (!box) return;
+    box.innerHTML = '';
+    for (var i = 0; i < 3; i++) {
+      var dot = document.createElement('i');
+      dot.className = 'mini-heart';
+      box.appendChild(dot);
+    }
+  }
+
+  function paintMiniHearts(box, lives) {
+    if (!box) return;
+    var dots = box.querySelectorAll('.mini-heart');
+    for (var i = 0; i < dots.length; i++) {
+      dots[i].classList.toggle('is-lost', i >= lives);
+    }
+  }
+
   var UI = {
     els: {},
 
@@ -35,6 +54,20 @@
       e.hudCombo = document.getElementById('hudCombo');
       e.hudInput = document.getElementById('hudInput');
       e.hearts = document.getElementById('hudHearts');
+      e.versusBar = document.getElementById('versusBar');
+      e.vbPlayerScore = document.getElementById('vbPlayerScore');
+      e.vbAiScore = document.getElementById('vbAiScore');
+      e.vbFill = document.getElementById('vbFill');
+      e.vbTrack = document.getElementById('vbTrack');
+      e.vbHold = document.getElementById('vbHold');
+      e.laneWrap = document.getElementById('laneWrap');
+      e.lanePlayer = document.getElementById('lanePlayer');
+      e.laneAi = document.getElementById('laneAi');
+      e.playerMiniHearts = document.getElementById('playerMiniHearts');
+      e.aiMiniHearts = document.getElementById('aiMiniHearts');
+      e.aiState = document.getElementById('aiState');
+      fillMiniHearts(e.playerMiniHearts);
+      fillMiniHearts(e.aiMiniHearts);
       this._lives = 3;
       e.nickLabel = document.getElementById('nickLabel');
       e.homeBest = document.getElementById('homeBest');
@@ -83,6 +116,38 @@
       if (e.hudTargetItem) e.hudTargetItem.hidden = !solo;
       if (e.hudAiItem) e.hudAiItem.hidden = d.mode !== 'versus';
       if (e.hudAi) e.hudAi.textContent = d.aiScore || 0;
+
+      // AI 对战：双跑道 + 拔河条
+      var versus = d.mode === 'versus';
+      if (e.versusBar) e.versusBar.hidden = !versus;
+      if (e.laneWrap) e.laneWrap.hidden = !versus;
+      if (e.gameArea) e.gameArea.classList.toggle('is-versus', versus);
+      if (versus && e.vbFill) {
+        var share = typeof d.versusShare === 'number' ? d.versusShare : 0.5;
+        share = Math.max(0, Math.min(1, share));
+        e.vbFill.style.width = (share * 100).toFixed(1) + '%';
+        if (e.vbPlayerScore) e.vbPlayerScore.textContent = d.score;
+        if (e.vbAiScore) e.vbAiScore.textContent = d.aiScore || 0;
+
+        var side = d.versusSide || '';
+        if (e.vbTrack) {
+          e.vbTrack.classList.toggle('is-hot-player', side === 'player');
+          e.vbTrack.classList.toggle('is-hot-ai', side === 'ai');
+        }
+        if (e.vbHold) {
+          if (side && d.versusHold > 0) {
+            e.vbHold.hidden = false;
+            e.vbHold.textContent = (side === 'player' ? '你' : 'AI') + ' 压制 ' +
+              Math.max(0, 3 - d.versusHold).toFixed(1) + 's';
+          } else {
+            e.vbHold.hidden = true;
+          }
+        }
+        paintMiniHearts(e.playerMiniHearts, Math.max(0, Math.min(3, d.lives)));
+        paintMiniHearts(e.aiMiniHearts, Math.max(0, Math.min(3,
+          typeof d.aiLives === 'number' ? d.aiLives : 3)));
+        if (e.aiState) e.aiState.textContent = d.aiState || '等待';
+      }
 
       // 生命：3 颗爱心，失去的那颗变成灰色裂纹并播放碎裂动画
       var lives = Math.max(0, Math.min(3, typeof d.lives === 'number' ? d.lives : 3));

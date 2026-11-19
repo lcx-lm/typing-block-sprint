@@ -590,7 +590,7 @@
 
     if (diffNote) {
       diffNote.textContent = picked.mode === 'versus'
-        ? '难度同时决定下落速度与 AI 对手的抢分速度'
+        ? '难度决定下落速度，以及 AI 的读词反应、打字速度与失误率'
         : '难度决定下落速度、出块间隔与单词长度上限';
     }
 
@@ -629,8 +629,10 @@
     }
 
     if (mode === 'versus') {
-      if (stats.score > stats.aiScore) return { delta: 20, result: 'win' };
-      if (stats.score === stats.aiScore) return { delta: 5, result: 'draw' };
+      var winner = stats.versusWinner ||
+        (stats.score > stats.aiScore ? 'player' : (stats.score === stats.aiScore ? 'draw' : 'ai'));
+      if (winner === 'player') return { delta: 20, result: 'win' };
+      if (winner === 'draw') return { delta: 5, result: 'draw' };
       return { delta: -10, result: 'lose' };
     }
 
@@ -729,9 +731,22 @@
         (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
       winView = outcome.delta > 0;
     } else if (mode === 'versus') {
-      var cmp = stats.score > stats.aiScore ? '胜利' : (stats.score === stats.aiScore ? '平局' : '失败');
-      status.textContent = 'AI 对战 · 你 ' + stats.score + ' : ' + stats.aiScore + ' AI · ' + cmp;
-      winView = stats.score >= stats.aiScore;
+      var vWinner = stats.versusWinner ||
+        (stats.score > stats.aiScore ? 'player' : (stats.score === stats.aiScore ? 'draw' : 'ai'));
+      var cmp = vWinner === 'player' ? '胜利' : (vWinner === 'draw' ? '平局' : '失败');
+      var why = '';
+      if (stats.failReason === 'ko') {
+        why = vWinner === 'player' ? '拔河压制' : '被 AI 压制';
+      } else if (stats.failReason === 'aiLives') {
+        why = 'AI 爱心碎完';
+      } else if (stats.failReason === 'lives') {
+        why = '你的爱心碎完';
+      } else {
+        why = '时间到，按比分判定';
+      }
+      status.textContent = 'AI 对战 · 你 ' + stats.score + ' : ' + stats.aiScore +
+        ' AI · ' + cmp + '（' + why + '）';
+      winView = vWinner === 'player';
     } else {
       var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
       if (stats.win) {
@@ -877,7 +892,7 @@
         '<ul>' +
           '<li>关卡数由词库词数自动计算（<b>6 ~ 50</b> 关），每关使用一组词</li>' +
           '<li>初次进入只解锁第 <b>1</b> 关，通关后自动解锁下一关，并记录已通关关卡</li>' +
-          '<li>每关限时 <b>50</b> 秒，第一关约需打掉 <b>10</b> 个词，目标逐关递增</li>' +
+          '<li>每关限时 <b>50</b> 秒，第一关约需打掉 <b>6</b> 个词（普通难度），目标逐关递增</li>' +
           '<li>目标分按本关平均词长、目标词数与难度系数自动计算</li>' +
         '</ul>' +
         '<p><b>生命规则</b></p>' +
@@ -894,7 +909,7 @@
         '<ul>' +
           '<li><b>单机闯关</b>：逐关解锁，每关 50 秒，达到目标分过关</li>' +
           '<li><b>限时冲刺</b>：整库词池单局 60 秒，不设关卡，冲击最高分</li>' +
-          '<li><b>AI 对战</b>：60 秒内与 AI 同场抢分，分数高者获胜</li>' +
+          '<li><b>AI 对战</b>：左右双跑道各 60 秒。AI 会读词、逐字输入并偶尔打错；任一方 3 颗爱心碎完即判负，一方分数占比达到 <b>70%</b> 并保持 <b>3</b> 秒可压制获胜，否则时间到按比分判定</li>' +
         '</ul>' +
         '<p><b>段位积分</b></p>' +
         '<p>每局结束按胜负增减积分；点击首页段位旁的「!」可查看当前段位、积分进度与完整规则。</p>' +

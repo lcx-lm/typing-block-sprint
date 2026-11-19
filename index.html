@@ -161,7 +161,41 @@
       <button class="btn ghost small" id="pauseBtn">暂停 Esc</button>
     </div>
 
+    <div class="versus-bar" id="versusBar" hidden>
+      <div class="vb-side vb-player">
+        <span class="vb-name">你</span>
+        <b id="vbPlayerScore">0</b>
+      </div>
+      <div class="vb-track" id="vbTrack">
+        <div class="vb-fill" id="vbFill"></div>
+        <i class="vb-mid"></i>
+        <i class="vb-tick vb-tick-30"></i>
+        <i class="vb-tick vb-tick-70"></i>
+        <span class="vb-hold" id="vbHold" hidden></span>
+      </div>
+      <div class="vb-side vb-ai">
+        <b id="vbAiScore">0</b>
+        <span class="vb-name">AI</span>
+      </div>
+    </div>
+
     <div class="game-area" id="gameArea">
+      <div class="lane-wrap" id="laneWrap" hidden>
+        <div class="lane lane-player" id="lanePlayer">
+          <div class="lane-head">
+            <span class="lane-name">你</span>
+            <div class="mini-hearts" id="playerMiniHearts"></div>
+          </div>
+        </div>
+        <div class="lane-sep"><b>VS</b></div>
+        <div class="lane lane-ai" id="laneAi">
+          <div class="lane-head">
+            <span class="lane-name">AI</span>
+            <span class="ai-state" id="aiState">等待</span>
+            <div class="mini-hearts" id="aiMiniHearts"></div>
+          </div>
+        </div>
+      </div>
       <div class="pause-mask" id="pauseMask">
         <div class="pause-card">
           <div class="pause-title">已暂停</div>
