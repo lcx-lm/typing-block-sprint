@@ -9,9 +9,9 @@
 
   /* ---------------- 难度参数（严格按需求） ---------------- */
   var DIFFS = {
-    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 7,  desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
-    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 10, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
-    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 13, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 18, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 24, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 30, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   /* ---------------- 生命与数值 ----------------
@@ -30,11 +30,12 @@
   var LEVEL_TIME = 50;   // 每关秒数
   var MODE_TIME = 60;    // 限时冲刺 / AI 对战单局秒数
 
-  // 每关需要稳定打掉的单词数：第一关约 10 个，随关卡递增
+  // 每关需要稳定打掉的单词数：随关卡递增
+  // 按实测校准：四级普通第 1 关约 6 词（目标约 490 分），最后一关约 11 词
   var WORD_GOALS = {
-    easy:   { from: 9,  to: 14 },
-    normal: { from: 10, to: 17 },
-    hard:   { from: 11, to: 20 }
+    easy:   { from: 5,  to: 9 },
+    normal: { from: 6,  to: 11 },
+    hard:   { from: 7,  to: 13 }
   };
 
   var areaEl = null;
