@@ -14,20 +14,22 @@
      ------------------------------------------------ */
   var DIFFS = {
     easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8,
-              aiSpawnInterval: 5200, aiCps: 2.2, aiReact: [1.2, 1.7], aiError: 0.12,
+              aiSpawnInterval: 6200, aiCps: 1.8, aiReact: [1.5, 2.0], aiError: 0.22,
               desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
     normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0,
-              aiSpawnInterval: 3900, aiCps: 3.2, aiReact: [0.8, 1.2], aiError: 0.08,
+              aiSpawnInterval: 5500, aiCps: 2.6, aiReact: [1.0, 1.5], aiError: 0.18,
               desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
     hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3,
-              aiSpawnInterval: 3000, aiCps: 4.4, aiReact: [0.45, 0.8], aiError: 0.05,
+              aiSpawnInterval: 4500, aiCps: 3.6, aiReact: [0.6, 1.0], aiError: 0.10,
               desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   // 双跑道每条只有半屏宽，限制最长词，避免长词挤出跑道
   var VERSE_MAX_WORD = 9;
+  // 对战里玩家跑道出块放缓，避免被持续下落的方块压死而忽略比分对抗
+  var VERSE_PLAYER_SPAWN_SCALE = 1.6;
   // AI 连击加成上限，避免机器一路滚雪球
-  var AI_COMBO_CAP = 8;
+  var AI_COMBO_CAP = 6;
   // 拔河条：70% 压制、保持 3 秒、15 秒后且总分 400 才启用
   var VERSE_KO_SHARE = 0.70;
   var VERSE_KO_RELEASE = 0.65;   // 回落到 65% 以下才解除压制读秒
@@ -669,6 +671,7 @@
 
     // 目标被消除或掉落后重新选择
     if (ai.target && (ai.target.dead || G.blocks.indexOf(ai.target) === -1)) {
+      if (ai.target.el) ai.target.el.classList.remove('is-typo');
       ai.target = null;
       ai.typed = '';
       ai.charAcc = 0;
@@ -688,13 +691,15 @@
       ai.reactUntil = now + cfg.aiReact[0] +
         Math.random() * (cfg.aiReact[1] - cfg.aiReact[0]);
 
-      // 每个词有一定概率“打错”：多停顿一下并清空连击
+      // 每个词有一定概率“打错”：方块变红并停顿，清空连击后再重打
       if (Math.random() < cfg.aiError) {
         ai.reactUntil += 0.5 + Math.random() * 0.6;
         ai.mistakeUntil = ai.reactUntil;
         ai.combo = 0;
+        if (next.el) next.el.classList.add('is-typo');
       } else {
         ai.mistakeUntil = 0;
+        if (next.el) next.el.classList.remove('is-typo');
       }
       ai.state = '读词中';
       return;
@@ -705,6 +710,9 @@
       ai.state = now < ai.mistakeUntil ? '打错了' : '读词中';
       return;
     }
+
+    // 停顿结束，恢复正常并继续逐字输入
+    if (ai.target.el) ai.target.el.classList.remove('is-typo');
 
     // 按每秒字符数逐字推进
     var target = ai.target;
@@ -861,6 +869,7 @@
 
       G.spawnAcc += dt * 1000;
       var gap = DIFFS[G.diffKey].spawnInterval;
+      if (G.mode === 'versus') gap *= VERSE_PLAYER_SPAWN_SCALE;
       if (G.spawnAcc >= gap) {
         G.spawnAcc -= gap;
         spawnBlock('player');

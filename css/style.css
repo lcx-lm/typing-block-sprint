@@ -931,6 +931,24 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 .lane-ai .block-word span.on{color:var(--gold);text-shadow:0 0 12px rgba(251,191,36,.8)}
 .lane-ai .block.near{border-color:rgba(251,113,133,.7)}
+.lane-ai .block.is-typo{
+  border-color:#fb7185;
+  box-shadow:0 0 0 1px rgba(251,113,133,.65),0 0 20px rgba(251,113,133,.35);
+  animation:typoShake .28s ease;
+}
+.lane-ai .block.is-typo .block-word{color:#fecdd3}
+.lane-ai .block.is-typo::after{
+  content:'✕ 打错了';
+  position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);
+  padding:1px 6px;border-radius:999px;white-space:nowrap;
+  background:#be123c;color:#fff;font-size:9px;font-weight:800;
+  box-shadow:0 4px 10px rgba(190,18,60,.35);
+}
+@keyframes typoShake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-3px)}
+  75%{transform:translateX(3px)}
+}
 
 [data-theme="light"] .vb-track{background:linear-gradient(90deg,#f3d5dd,#f8dde4);border-color:#d9c2c9}
 [data-theme="light"] .vb-side b{color:#17293c}
