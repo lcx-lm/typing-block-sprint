@@ -16,7 +16,8 @@
     settings: { sound: true, theme: 'light' },
     helpSeen: false,
     guideSeen: false,
-    levelProgress: {}
+    levelProgress: {},
+    wrongBook: {}
   };
 
   // 选择页当前选中项
@@ -46,6 +47,9 @@
 
     var lp = ST.getJSON('levelProgress', {});
     DATA.levelProgress = lp && typeof lp === 'object' && !Array.isArray(lp) ? lp : {};
+
+    var wb = ST.getJSON('wrongBook', {});
+    DATA.wrongBook = wb && typeof wb === 'object' && !Array.isArray(wb) ? wb : {};
   }
 
   /* ---------------- 关卡解锁进度 ----------------
@@ -68,6 +72,88 @@
     if (!(level > clearedLevels(setKey, diffKey))) return;
     DATA.levelProgress[progressKey(setKey, diffKey)] = level;
     ST.setJSON('levelProgress', DATA.levelProgress);
+  }
+
+  /* ---------------- 错词本 ----------------
+     按词库记录打错的单词，同一单词累计次数，最多保留 120 个。
+     ------------------------------------------------ */
+  var WRONG_MAX = 120;
+
+  function wrongList(setKey) {
+    var list = DATA.wrongBook[setKey];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function addWrongWord(word, meaning, setKey) {
+    if (!word) return;
+    var list = DATA.wrongBook[setKey];
+    if (!Array.isArray(list)) list = DATA.wrongBook[setKey] = [];
+
+    var target = null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].word === word) {
+        target = list[i];
+        break;
+      }
+    }
+
+    if (target) {
+      target.count = (target.count || 1) + 1;
+      if (meaning) target.meaning = meaning;
+    } else {
+      list.push({ word: word, meaning: meaning || '', count: 1 });
+    }
+
+    list.sort(function (a, b) { return (b.count || 0) - (a.count || 0); });
+    if (list.length > WRONG_MAX) list.length = WRONG_MAX;
+
+    ST.setJSON('wrongBook', DATA.wrongBook);
+    renderWrongBook();
+  }
+
+  function renderWrongBook() {
+    var box = document.getElementById('homeWrong');
+    var note = document.getElementById('homeWrongNote');
+    if (!box) return;
+
+    var list = wrongList(picked.setKey);
+    var set = WORD_SETS[picked.setKey];
+
+    box.innerHTML = '';
+    if (!list.length) {
+      var empty = document.createElement('div');
+      empty.className = 'wb-empty';
+      empty.textContent = '还没有错词';
+      box.appendChild(empty);
+    } else {
+      list.slice(0, 8).forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'wb-item';
+
+        var word = document.createElement('span');
+        word.className = 'wb-word';
+        word.textContent = item.word;
+
+        var mean = document.createElement('span');
+        mean.className = 'wb-meaning';
+        mean.textContent = item.meaning || '';
+
+        var count = document.createElement('span');
+        count.className = 'wb-count';
+        count.textContent = '×' + (item.count || 1);
+
+        row.appendChild(word);
+        row.appendChild(mean);
+        row.appendChild(count);
+        box.appendChild(row);
+      });
+    }
+
+    if (note) {
+      note.textContent = set
+        ? '当前词库：' + set.name + ' · 共 ' + list.length + ' 个错词，对局中优先出现'
+        : '打错的单词会自动收集，对局中优先出现';
+    }
   }
 
   function saveLeaderboard() {
@@ -304,6 +390,7 @@
     UI.updateNickname(DATA.nickname);
     UI.updateHomeStats(DATA.bestScore, DATA.bestWpm);
     UI.renderLeaderboard(UI.els.homeLb, DATA.leaderboard, 5);
+    renderWrongBook();
   }
 
   /* ---------------- 选择页 ---------------- */
@@ -340,6 +427,7 @@
         for (var i = 0; i < all.length; i++) all[i].classList.remove('is-on');
         card.classList.add('is-on');
         buildLevelGrid();
+        renderWrongBook();
       });
 
       grid.appendChild(card);
@@ -679,6 +767,7 @@
         DATA.helpSeen = false;
         DATA.guideSeen = false;
         DATA.levelProgress = {};
+        DATA.wrongBook = {};
         picked.level = 1;
         Game.setSound(true);
         UI.applyTheme('light');
@@ -717,6 +806,22 @@
     document.getElementById('helpBtn').addEventListener('click', openHelp);
     document.getElementById('viewAllBtn').addEventListener('click', openLeaderboard);
 
+    // 错词本：只清空当前选中词库的记录
+    document.getElementById('clearWrongBtn').addEventListener('click', function () {
+      var list = wrongList(picked.setKey);
+      if (!list.length) {
+        UI.toast('当前词库还没有错词');
+        return;
+      }
+      var setName = WORD_SETS[picked.setKey] ? WORD_SETS[picked.setKey].name : picked.setKey;
+      UI.confirm('清空错词本', '将清空「' + setName + '」的 ' + list.length + ' 个错词，且不可恢复。确定继续？', function () {
+        DATA.wrongBook[picked.setKey] = [];
+        ST.setJSON('wrongBook', DATA.wrongBook);
+        renderWrongBook();
+        UI.toast('错词本已清空');
+      });
+    });
+
     // 选择页
     document.getElementById('backHomeBtn').addEventListener('click', function () {
       UI.showScreen('HOME');
@@ -724,7 +829,7 @@
     });
 
     document.getElementById('startGameBtn').addEventListener('click', function () {
-      Game.start(picked.setKey, picked.diffKey, picked.level);
+      Game.start(picked.setKey, picked.diffKey, picked.level, wrongList(picked.setKey));
     });
 
     // 对局页
@@ -737,7 +842,7 @@
 
     // 结算页
     document.getElementById('againBtn').addEventListener('click', function () {
-      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level);
+      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level, wrongList(lastConfig.setKey));
     });
 
     document.getElementById('changeSetBtn').addEventListener('click', function () {
@@ -768,6 +873,7 @@
     Game.setSound(DATA.settings.sound);
     Game.onEnd = handleGameEnd;
     Game.onLevelClear = saveLevelClear;
+    Game.onWrongWord = addWrongWord;
 
     Game.init();
     initGuide();

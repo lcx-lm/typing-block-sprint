@@ -55,6 +55,7 @@
     spawnAcc: 0,
     blocks: [],
     wrongWords: [],
+    reviewPool: [],
     composing: false,
     raf: 0,
     last: 0,
@@ -211,8 +212,19 @@
 
     // 尽量避免同屏重复单词
     var onScreen = G.blocks.map(function (b) { return b.word; });
-    var avail = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
-    if (!avail.length) avail = filtered;
+
+    // 错词本中的词有更高概率优先出现
+    var review = G.reviewPool.filter(function (w) {
+      return w && w.word && w.word.length <= maxLen && onScreen.indexOf(w.word) === -1;
+    });
+
+    var avail;
+    if (review.length && Math.random() < 0.35) {
+      avail = review;
+    } else {
+      avail = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
+      if (!avail.length) avail = filtered;
+    }
 
     var item = avail[Math.floor(Math.random() * avail.length)];
 
@@ -307,7 +319,7 @@
     if (!candidates.length) candidates = G.blocks.slice();
     if (!candidates.length) return null;
     candidates.sort(function (a, b) { return b.y - a.y; });
-    return candidates[0].word;
+    return candidates[0];
   }
 
   function registerError() {
@@ -316,7 +328,13 @@
     G.errorCount++;
     G.combo = 0;
     G.input = '';
-    if (blame) G.wrongWords.push(blame);
+    if (blame) {
+      G.wrongWords.push(blame.word);
+      // 交给入口层持久化到错词本
+      if (typeof Game.onWrongWord === 'function') {
+        Game.onWrongWord(blame.word, blame.meaning, G.setKey);
+      }
+    }
 
     global.UI.flash();
     beep(110, 0.16, 'sawtooth', 0.05);
@@ -544,7 +562,7 @@
   }
 
   /* ---------------- 流程控制 ---------------- */
-  function start(setKey, diffKey, startLevel) {
+  function start(setKey, diffKey, startLevel, reviewWords) {
     if (!WORD_SETS[setKey]) setKey = 'cet4';
     if (!DIFFS[diffKey]) diffKey = 'normal';
 
@@ -564,6 +582,7 @@
     G.input = '';
     G.spawnAcc = 0;
     G.wrongWords = [];
+    G.reviewPool = Array.isArray(reviewWords) ? reviewWords.slice() : [];
     G.composing = false;
     G.paused = false;
     G.transitioning = false;
@@ -671,6 +690,7 @@
     LEVEL_TIME: LEVEL_TIME,
     onEnd: null,
     onLevelClear: null,
+    onWrongWord: null,
 
     // 供选择页展示：关卡数随词库词量自动变化
     getLevelCount: function (setKey) {

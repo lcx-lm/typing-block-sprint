@@ -108,7 +108,7 @@
 
     // 重置所有本作品数据
     resetAll: function () {
-      var keys = ['nickname', 'bestScore', 'bestWpm', 'leaderboard', 'settings', 'helpSeen', 'guideSeen', 'levelProgress'];
+      var keys = ['nickname', 'bestScore', 'bestWpm', 'leaderboard', 'settings', 'helpSeen', 'guideSeen', 'levelProgress', 'wrongBook'];
       for (var i = 0; i < keys.length; i++) {
         this.remove(keys[i]);
       }
