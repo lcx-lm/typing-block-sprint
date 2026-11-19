@@ -382,6 +382,83 @@
     renderHUD();
   }
 
+  // 通关礼炮音效：低频“砰”+ 上行琶音
+  function playLevelClearSound() {
+    beep(160, 0.12, 'square', 0.07);
+    setTimeout(function () { beep(110, 0.16, 'sine', 0.08); }, 40);
+    setTimeout(function () { beep(523, 0.1, 'triangle', 0.05); }, 130);
+    setTimeout(function () { beep(659, 0.1, 'triangle', 0.05); }, 220);
+    setTimeout(function () { beep(784, 0.1, 'triangle', 0.05); }, 310);
+    setTimeout(function () { beep(1047, 0.22, 'triangle', 0.05); }, 400);
+  }
+
+  // 通关祝贺弹窗：进入下一关 / 退出
+  function showClearDialog() {
+    var ui = global.UI;
+    var level = G.levelIndex + 1;
+    var nextLv = G.levels[G.levelIndex + 1];
+
+    var wrap = document.createElement('div');
+    wrap.className = 'congrats';
+
+    var badge = document.createElement('div');
+    badge.className = 'congrats-badge';
+    badge.textContent = '✓';
+    wrap.appendChild(badge);
+
+    var title = document.createElement('div');
+    title.className = 'congrats-title';
+    title.textContent = '恭喜通关！';
+    wrap.appendChild(title);
+
+    var sub = document.createElement('div');
+    sub.className = 'congrats-sub';
+    sub.textContent = '第 ' + level + ' 关完成，下一关已解锁';
+    wrap.appendChild(sub);
+
+    var scores = document.createElement('div');
+    scores.className = 'congrats-score';
+    [
+      ['本关得分', G.levelScore],
+      ['当前总分', G.score],
+      ['下一关目标', nextLv ? nextLv.target : '—']
+    ].forEach(function (item) {
+      var box = document.createElement('div');
+      var cap = document.createElement('span');
+      cap.textContent = item[0];
+      var val = document.createElement('b');
+      val.textContent = item[1];
+      box.appendChild(cap);
+      box.appendChild(val);
+      scores.appendChild(box);
+    });
+    wrap.appendChild(scores);
+
+    ui.openModal({
+      title: '关卡完成',
+      content: wrap,
+      closeOnMask: false,
+      actions: [
+        {
+          label: '退出',
+          onClick: function () {
+            ui.closeModal();
+            G.failReason = 'quit';
+            endGame();
+          }
+        },
+        {
+          label: '进入下一关',
+          primary: true,
+          onClick: function () {
+            ui.closeModal();
+            beginLevel(G.levelIndex + 1);
+          }
+        }
+      ]
+    });
+  }
+
   function levelClear() {
     var isLast = G.levelIndex >= G.levels.length - 1;
     G.cleared = G.levelIndex + 1;
@@ -391,26 +468,23 @@
       Game.onLevelClear(G.cleared, G.setKey, G.diffKey);
     }
 
-    beep(660, 0.09, 'triangle', 0.05);
-    setTimeout(function () { beep(880, 0.12, 'triangle', 0.045); }, 90);
+    playLevelClearSound();
 
     if (isLast) {
       G.failReason = 'win';
       G.transitioning = true;
       renderHUD();
+      global.UI.celebrate();
       global.UI.toast('全部 ' + G.levels.length + ' 关通过！');
       setTimeout(endGame, 550);
       return;
     }
 
+    // 冻结方块与计时，等玩家选择进入下一关或退出
     G.transitioning = true;
     renderHUD();
-    global.UI.toast('第 ' + (G.levelIndex + 1) + ' 关通过，准备下一关');
-
-    setTimeout(function () {
-      if (G.state !== 'PLAYING') return;
-      beginLevel(G.levelIndex + 1);
-    }, 1200);
+    global.UI.celebrate();
+    showClearDialog();
   }
 
   function beginLevel(i) {

@@ -736,12 +736,14 @@
       var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
       if (stats.win) {
         status.textContent = lvText + ' · 全部通关';
+      } else if (stats.failReason === 'quit') {
+        status.textContent = lvText + ' · 已退出本局';
       } else if (stats.failReason === 'time') {
         status.textContent = lvText + ' · 时间到，本局结束';
       } else {
         status.textContent = lvText + ' · 爱心碎完，本局结束';
       }
-      winView = !!stats.win;
+      winView = !!stats.win || (stats.failReason === 'quit' && stats.cleared > 0);
     }
     status.classList.toggle('is-win', winView);
 

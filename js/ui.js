@@ -242,16 +242,61 @@
       mask.appendChild(card);
       root.appendChild(mask);
 
-      // 点击遮罩空白处关闭
-      mask.addEventListener('mousedown', function (ev) {
-        if (ev.target === mask) UI.closeModal();
-      });
+      // 点击遮罩空白处关闭；祝贺弹窗等必须二选一时传 closeOnMask:false
+      if (opts.closeOnMask !== false) {
+        mask.addEventListener('mousedown', function (ev) {
+          if (ev.target === mask) UI.closeModal();
+        });
+      }
 
       return card;
     },
 
     closeModal: function () {
       this.els.modalRoot.innerHTML = '';
+    },
+
+    // 礼炮彩带：从屏幕左右下角向斜上方喷出，纯 DOM + CSS，无外部素材
+    celebrate: function () {
+      var old = document.getElementById('confettiLayer');
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+
+      var layer = document.createElement('div');
+      layer.id = 'confettiLayer';
+      layer.className = 'confetti-layer';
+      layer.setAttribute('aria-hidden', 'true');
+
+      var colors = ['#5eead4', '#fbbf24', '#f472b6', '#60a5fa', '#a78bfa', '#f87171'];
+      var total = 64;
+
+      for (var i = 0; i < total; i++) {
+        var piece = document.createElement('i');
+        piece.className = 'confetti-piece';
+        if (i % 5 === 0) piece.classList.add('is-round');
+
+        var fromLeft = i % 2 === 0;
+        piece.style.left = fromLeft ? '6%' : '94%';
+        piece.style.bottom = '4%';
+        piece.style.background = colors[i % colors.length];
+
+        // 左右礼炮口向斜上方喷出，再受重力落下
+        var tx = (fromLeft ? 1 : -1) * (60 + Math.random() * 260);
+        var ty = -(180 + Math.random() * 340);
+        var rot = (Math.random() > 0.5 ? 1 : -1) * (360 + Math.random() * 720);
+        piece.style.setProperty('--tx', tx.toFixed(0) + 'px');
+        piece.style.setProperty('--ty', ty.toFixed(0) + 'px');
+        piece.style.setProperty('--tx2', (tx * 1.25).toFixed(0) + 'px');
+        piece.style.setProperty('--ty2', (ty + 320).toFixed(0) + 'px');
+        piece.style.setProperty('--rot', rot.toFixed(0) + 'deg');
+        piece.style.setProperty('--rot2', (rot * 1.6).toFixed(0) + 'deg');
+        piece.style.setProperty('--d', (Math.random() * 0.18).toFixed(2) + 's');
+        layer.appendChild(piece);
+      }
+
+      document.body.appendChild(layer);
+      setTimeout(function () {
+        if (layer.parentNode) layer.parentNode.removeChild(layer);
+      }, 2600);
     },
 
     confirm: function (title, text, onOk) {
