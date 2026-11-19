@@ -9,9 +9,9 @@
 
   /* ---------------- 难度参数（严格按需求） ---------------- */
   var DIFFS = {
-    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
-    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
-    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 18, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 24, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 30, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   /* ---------------- 生命与数值 ----------------
@@ -28,6 +28,7 @@
   var MIN_LEVELS = 6;
   var MAX_LEVELS = 50;
   var LEVEL_TIME = 50;   // 每关秒数
+  var MODE_TIME = 60;    // 限时冲刺 / AI 对战单局秒数
 
   // 每关需要稳定打掉的单词数：第一关约 10 个，随关卡递增
   var WORD_GOALS = {
@@ -44,6 +45,9 @@
     paused: false,
     setKey: 'cet4',
     diffKey: 'normal',
+    mode: 'solo',
+    aiScore: 0,
+    aiRate: 24,
     score: 0,
     lives: LIVES_MAX,
     combo: 0,
@@ -129,7 +133,9 @@
       levelTotal: G.levels.length,
       levelScore: G.levelScore,
       levelTarget: G.levelTarget,
-      time: Math.ceil(G.levelTime)
+      time: Math.ceil(G.levelTime),
+      mode: G.mode,
+      aiScore: Math.round(G.aiScore)
     });
   }
 
@@ -365,8 +371,8 @@
 
     beep(620 + Math.min(G.combo, 10) * 45, 0.07, 'triangle', 0.045);
 
-    // 达到本关目标分：过关，进入下一关
-    if (G.levelScore >= G.levelTarget) {
+    // 只有单机闯关才有关卡目标；冲刺与 AI 对战不自动过关
+    if (G.mode === 'solo' && G.levelScore >= G.levelTarget) {
       levelClear();
       return;
     }
@@ -554,6 +560,11 @@
         spawnBlock();
       }
 
+      // AI 对手按难度速率抢分，带 ±20% 随机抖动
+      if (G.mode === 'versus') {
+        G.aiScore += G.aiRate * dt * (0.8 + Math.random() * 0.4);
+      }
+
       moveBlocks(dt);
       renderHUD();
     }
@@ -562,9 +573,10 @@
   }
 
   /* ---------------- 流程控制 ---------------- */
-  function start(setKey, diffKey, startLevel, reviewWords) {
+  function start(setKey, diffKey, startLevel, reviewWords, mode) {
     if (!WORD_SETS[setKey]) setKey = 'cet4';
     if (!DIFFS[diffKey]) diffKey = 'normal';
+    if (mode !== 'sprint' && mode !== 'versus') mode = 'solo';
 
     // 先彻底清理上一局残留
     stopLoop();
@@ -572,6 +584,9 @@
 
     G.setKey = setKey;
     G.diffKey = diffKey;
+    G.mode = mode;
+    G.aiScore = 0;
+    G.aiRate = DIFFS[diffKey].aiRate;
     G.score = 0;
     G.lives = LIVES_MAX;
     G.combo = 0;
@@ -588,8 +603,22 @@
     G.transitioning = false;
     G.failReason = '';
     G.cleared = 0;
-    G.levels = buildLevels(setKey, diffKey);
-    var startIdx = Math.max(0, Math.min(G.levels.length - 1, (parseInt(startLevel, 10) || 1) - 1));
+
+    var startIdx;
+    if (mode === 'solo') {
+      G.levels = buildLevels(setKey, diffKey);
+      startIdx = Math.max(0, Math.min(G.levels.length - 1, (parseInt(startLevel, 10) || 1) - 1));
+    } else {
+      // 冲刺 / AI 对战：整库词池单局 60 秒，不设关卡目标
+      G.levels = [{
+        index: 1,
+        pool: WORD_SETS[setKey].words.slice(),
+        wordsNeeded: 0,
+        target: Infinity,
+        timeLimit: MODE_TIME
+      }];
+      startIdx = 0;
+    }
     G.levelIndex = startIdx;
     G.startLevel = startIdx + 1;
     G.state = 'PLAYING';
@@ -660,6 +689,8 @@
       wrongWords: G.wrongWords.slice(),
       setKey: G.setKey,
       diffKey: G.diffKey,
+      mode: G.mode,
+      aiScore: Math.round(G.aiScore),
       elapsedMs: G.elapsedMs,
       levelIndex: G.levelIndex + 1,
       levelTotal: G.levels.length,

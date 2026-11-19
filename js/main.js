@@ -17,13 +17,45 @@
     helpSeen: false,
     guideSeen: false,
     levelProgress: {},
-    wrongBook: {}
+    wrongBook: {},
+    rankPoints: 0,
+    rankRecord: { wins: 0, losses: 0, draws: 0 }
   };
 
   // 选择页当前选中项
-  var picked = { setKey: 'cet4', diffKey: 'normal', level: 1 };
+  var picked = { setKey: 'cet4', diffKey: 'normal', level: 1, mode: 'solo' };
   // 结算页“再来一局”使用的配置
-  var lastConfig = { setKey: 'cet4', diffKey: 'normal', level: 1 };
+  var lastConfig = { setKey: 'cet4', diffKey: 'normal', level: 1, mode: 'solo' };
+  // 本局开始前已通关的关卡数，用于计算“首次通关”加分
+  var runBaseCleared = 0;
+
+  /* ---------------- 段位 ---------------- */
+  var RANKS = [
+    { name: '青铜', min: 0 },
+    { name: '白银', min: 100 },
+    { name: '黄金', min: 300 },
+    { name: '铂金', min: 600 },
+    { name: '钻石', min: 1000 }
+  ];
+
+  function rankOf(points) {
+    var p = Math.max(0, parseInt(points, 10) || 0);
+    var idx = 0;
+    for (var i = RANKS.length - 1; i >= 0; i--) {
+      if (p >= RANKS[i].min) { idx = i; break; }
+    }
+    return {
+      index: idx,
+      name: RANKS[idx].name,
+      min: RANKS[idx].min,
+      next: RANKS[idx + 1] || null
+    };
+  }
+
+  function updateRankChip() {
+    var el = document.getElementById('rankLabel');
+    if (el) el.textContent = rankOf(DATA.rankPoints).name;
+  }
 
   /* ---------------- 持久化读取 ---------------- */
   function loadData() {
@@ -50,6 +82,14 @@
 
     var wb = ST.getJSON('wrongBook', {});
     DATA.wrongBook = wb && typeof wb === 'object' && !Array.isArray(wb) ? wb : {};
+
+    DATA.rankPoints = Math.max(0, parseInt(ST.get('rankPoints', '0'), 10) || 0);
+    var rr = ST.getJSON('rankRecord', {});
+    DATA.rankRecord = {
+      wins: Math.max(0, parseInt(rr && rr.wins, 10) || 0),
+      losses: Math.max(0, parseInt(rr && rr.losses, 10) || 0),
+      draws: Math.max(0, parseInt(rr && rr.draws, 10) || 0)
+    };
   }
 
   /* ---------------- 关卡解锁进度 ----------------
@@ -389,6 +429,7 @@
   function refreshHome() {
     UI.updateNickname(DATA.nickname);
     UI.updateHomeStats(DATA.bestScore, DATA.bestWpm);
+    updateRankChip();
     UI.renderLeaderboard(UI.els.homeLb, DATA.leaderboard, 5);
     renderWrongBook();
   }
@@ -517,7 +558,7 @@
 
   function updateLevelNote() {
     var note = document.getElementById('levelNote');
-    if (!note) return;
+    if (!note || picked.mode !== 'solo') return;
 
     var total = Game.getLevelCount(picked.setKey);
     var cleared = clearedLevels(picked.setKey, picked.diffKey);
@@ -531,14 +572,127 @@
     if (btn) btn.textContent = '开始第 ' + picked.level + ' 关';
   }
 
+  /* ---------------- 模式与开局 ---------------- */
+  function applyModeToSelect() {
+    var solo = picked.mode === 'solo';
+    var banner = document.getElementById('modeBanner');
+    var levelSection = document.getElementById('levelSection');
+    var diffNote = document.getElementById('diffNote');
+    var btn = document.getElementById('startGameBtn');
+
+    if (levelSection) levelSection.hidden = !solo;
+
+    if (banner) {
+      banner.textContent = solo
+        ? '单机闯关 · 逐关解锁'
+        : (picked.mode === 'sprint' ? '限时冲刺 · 60 秒整库词池' : 'AI 对战 · 60 秒同场抢分');
+    }
+
+    if (diffNote) {
+      diffNote.textContent = picked.mode === 'versus'
+        ? '难度同时决定下落速度与 AI 对手的抢分速度'
+        : '难度决定下落速度、出块间隔与单词长度上限';
+    }
+
+    if (solo) {
+      updateLevelNote();
+    } else if (btn) {
+      btn.textContent = picked.mode === 'sprint' ? '开始冲刺' : '开始对战';
+    }
+  }
+
+  function openSelect(mode) {
+    picked.mode = mode;
+    if (mode === 'solo') picked.level = unlockedMax(picked.setKey, picked.diffKey);
+    buildLevelGrid();
+    applyModeToSelect();
+    UI.showScreen('SELECT');
+  }
+
+  function launchGame() {
+    runBaseCleared = picked.mode === 'solo' ? clearedLevels(picked.setKey, picked.diffKey) : 0;
+    lastConfig = {
+      setKey: picked.setKey,
+      diffKey: picked.diffKey,
+      level: picked.level,
+      mode: picked.mode
+    };
+    Game.start(picked.setKey, picked.diffKey, picked.level, wrongList(picked.setKey), picked.mode);
+  }
+
+  /* ---------------- 排位积分 ---------------- */
+  function calcRankOutcome(stats, mode) {
+    if (mode === 'sprint') {
+      if (stats.score >= 600) return { delta: 15, result: 'win' };
+      if (stats.score >= 400) return { delta: 5, result: 'win' };
+      return { delta: -8, result: 'lose' };
+    }
+
+    if (mode === 'versus') {
+      if (stats.score > stats.aiScore) return { delta: 20, result: 'win' };
+      if (stats.score === stats.aiScore) return { delta: 5, result: 'draw' };
+      return { delta: -10, result: 'lose' };
+    }
+
+    var delta;
+    var result = 'lose';
+    if (stats.win) {
+      delta = 30;
+      result = 'win';
+    } else if (stats.cleared >= 3) {
+      delta = 20;
+      result = 'win';
+    } else if (stats.cleared >= 1) {
+      delta = 5;
+      result = 'win';
+    } else {
+      delta = -10;
+    }
+
+    // 本局首次通关的关卡，每关额外 +10
+    var bonus = 0;
+    for (var lv = stats.startLevel; lv <= stats.cleared; lv++) {
+      if (lv > runBaseCleared) bonus++;
+    }
+
+    return { delta: delta + bonus * 10, result: result, bonus: bonus };
+  }
+
+  function applyRankResult(delta, result) {
+    var before = rankOf(DATA.rankPoints);
+    var pts = Math.max(0, DATA.rankPoints + delta);
+    DATA.rankPoints = pts;
+    ST.set('rankPoints', String(pts));
+
+    if (result === 'win') DATA.rankRecord.wins++;
+    else if (result === 'draw') DATA.rankRecord.draws++;
+    else DATA.rankRecord.losses++;
+    ST.setJSON('rankRecord', DATA.rankRecord);
+
+    var after = rankOf(pts);
+    updateRankChip();
+
+    if (after.index > before.index) {
+      UI.toast('段位提升：' + after.name + '！');
+    }
+    return after;
+  }
+
   /* ---------------- 结算 ---------------- */
   function handleGameEnd(stats) {
+    var mode = stats.mode || 'solo';
+
     // 失败后“再来一局”重试失败的那一关，通关后从原起关卡重玩
     lastConfig = {
       setKey: stats.setKey,
       diffKey: stats.diffKey,
-      level: stats.win ? stats.startLevel : stats.levelIndex
+      level: mode === 'solo' ? (stats.win ? stats.startLevel : stats.levelIndex) : 1,
+      mode: mode
     };
+
+    // 段位积分先结算，保持与结算页展示一致
+    var outcome = calcRankOutcome(stats, mode);
+    var afterRank = applyRankResult(outcome.delta, outcome.result);
 
     var isNewRecord = stats.score > DATA.bestScore;
 
@@ -567,17 +721,36 @@
     document.getElementById('resWpm').textContent = stats.wpm;
     document.getElementById('resCombo').textContent = stats.maxCombo;
 
-    // 关卡结果：通关 / 时间到 / 爱心碎完
+    // 结算状态：按模式区分文案
     var status = document.getElementById('resStatus');
-    var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
-    if (stats.win) {
-      status.textContent = lvText + ' · 全部通关';
-    } else if (stats.failReason === 'time') {
-      status.textContent = lvText + ' · 时间到，本局结束';
+    var winView;
+    if (mode === 'sprint') {
+      status.textContent = '限时冲刺 · 60 秒得分 ' + stats.score +
+        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
+      winView = outcome.delta > 0;
+    } else if (mode === 'versus') {
+      var cmp = stats.score > stats.aiScore ? '胜利' : (stats.score === stats.aiScore ? '平局' : '失败');
+      status.textContent = 'AI 对战 · 你 ' + stats.score + ' : ' + stats.aiScore + ' AI · ' + cmp;
+      winView = stats.score >= stats.aiScore;
     } else {
-      status.textContent = lvText + ' · 爱心碎完，本局结束';
+      var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
+      if (stats.win) {
+        status.textContent = lvText + ' · 全部通关';
+      } else if (stats.failReason === 'time') {
+        status.textContent = lvText + ' · 时间到，本局结束';
+      } else {
+        status.textContent = lvText + ' · 爱心碎完，本局结束';
+      }
+      winView = !!stats.win;
     }
-    status.classList.toggle('is-win', !!stats.win);
+    status.classList.toggle('is-win', winView);
+
+    // 段位积分变化
+    var rankEl = document.getElementById('resRank');
+    rankEl.textContent = '段位积分 ' + (outcome.delta > 0 ? '+' : '') + outcome.delta +
+      ' · 当前 ' + afterRank.name + '（' + DATA.rankPoints + ' 分）';
+    rankEl.classList.toggle('up', outcome.delta > 0);
+    rankEl.classList.toggle('down', outcome.delta < 0);
 
     // 破纪录标记：两种状态都给明确文案
     var recBadge = document.getElementById('resNew');
@@ -614,6 +787,80 @@
   }
 
   /* ---------------- 弹窗内容 ---------------- */
+  function openRankInfo() {
+    var r = rankOf(DATA.rankPoints);
+    var wrap = document.createElement('div');
+
+    var hero = document.createElement('div');
+    hero.className = 'rank-hero';
+    var name = document.createElement('div');
+    name.className = 'rank-name';
+    name.textContent = r.name;
+    var pts = document.createElement('div');
+    pts.className = 'rank-points';
+    pts.textContent = DATA.rankPoints;
+    var unit = document.createElement('span');
+    unit.textContent = '积分';
+    pts.appendChild(unit);
+    hero.appendChild(name);
+    hero.appendChild(pts);
+    wrap.appendChild(hero);
+
+    var bar = document.createElement('div');
+    bar.className = 'rank-bar';
+    var fill = document.createElement('i');
+    var pct = 100;
+    if (r.next) {
+      var span = r.next.min - r.min;
+      pct = Math.max(0, Math.min(100, ((DATA.rankPoints - r.min) / span) * 100));
+    }
+    fill.style.width = pct + '%';
+    bar.appendChild(fill);
+    wrap.appendChild(bar);
+
+    var next = document.createElement('div');
+    next.className = 'rank-next';
+    next.textContent = r.next
+      ? '距 ' + r.next.name + ' 还差 ' + Math.max(0, r.next.min - DATA.rankPoints) + ' 分'
+      : '已达到最高段位';
+    wrap.appendChild(next);
+
+    var rec = document.createElement('div');
+    rec.className = 'rank-record';
+    rec.textContent = '战绩：胜 ' + DATA.rankRecord.wins +
+      ' · 平 ' + DATA.rankRecord.draws +
+      ' · 负 ' + DATA.rankRecord.losses;
+    wrap.appendChild(rec);
+
+    var rules = document.createElement('div');
+    rules.className = 'rank-rules';
+    var t = document.createElement('div');
+    t.className = 't';
+    t.textContent = '积分规则';
+    rules.appendChild(t);
+
+    var ul = document.createElement('ul');
+    [
+      '单机闯关：全部通关 +30；通过 3 关及以上 +20；通过 1–2 关 +5；一关未过 −10',
+      '单机闯关：每首次通过一关，额外 +10',
+      '限时冲刺：600 分及以上 +15；400–599 分 +5；低于 400 分 −8',
+      'AI 对战：高于 AI +20；与 AI 持平 +5；低于 AI −10',
+      '积分最低为 0；段位门槛：青铜 0 / 白银 100 / 黄金 300 / 铂金 600 / 钻石 1000'
+    ].forEach(function (text) {
+      var li = document.createElement('li');
+      li.textContent = text;
+      ul.appendChild(li);
+    });
+    rules.appendChild(ul);
+    wrap.appendChild(rules);
+
+    UI.openModal({
+      title: '段位与积分',
+      content: wrap,
+      actions: [{ label: '知道了', primary: true, onClick: function () { UI.closeModal(); } }]
+    });
+  }
+
   function openHelp() {
     UI.openModal({
       title: '玩法与规则',
@@ -641,6 +888,14 @@
         '<p><b>计分</b></p>' +
         '<p>单次得分 = 单词长度 × 10 × 难度系数 × (1 + 连击数 × 0.1)</p>' +
         '<p>难度系数：简单 <b>0.8</b> · 普通 <b>1.0</b> · 困难 <b>1.3</b></p>' +
+        '<p><b>模式</b></p>' +
+        '<ul>' +
+          '<li><b>单机闯关</b>：逐关解锁，每关 50 秒，达到目标分过关</li>' +
+          '<li><b>限时冲刺</b>：整库词池单局 60 秒，不设关卡，冲击最高分</li>' +
+          '<li><b>AI 对战</b>：60 秒内与 AI 同场抢分，分数高者获胜</li>' +
+        '</ul>' +
+        '<p><b>段位积分</b></p>' +
+        '<p>每局结束按胜负增减积分；点击首页段位旁的「!」可查看当前段位、积分进度与完整规则。</p>' +
         '<p><b>操作</b></p>' +
         '<ul>' +
           '<li><b>字母 / 数字键</b>：逐字母输入当前单词</li>' +
@@ -757,7 +1012,7 @@
     btnReset.textContent = '重置所有数据';
     btnReset.style.marginTop = '8px';
     btnReset.addEventListener('click', function () {
-      UI.confirm('重置所有数据', '昵称、最高分、排行榜、设置、关卡解锁进度与新手引导进度都会被清空，下次进入将重新走引导。确定继续？', function () {
+      UI.confirm('重置所有数据', '昵称、最高分、排行榜、段位积分、设置、关卡解锁进度、错词本与新手引导进度都会被清空，下次进入将重新走引导。确定继续？', function () {
         ST.resetAll();
         DATA.nickname = '玩家';
         DATA.bestScore = 0;
@@ -768,7 +1023,10 @@
         DATA.guideSeen = false;
         DATA.levelProgress = {};
         DATA.wrongBook = {};
+        DATA.rankPoints = 0;
+        DATA.rankRecord = { wins: 0, losses: 0, draws: 0 };
         picked.level = 1;
+        picked.mode = 'solo';
         Game.setSound(true);
         UI.applyTheme('light');
         refreshHome();
@@ -788,10 +1046,16 @@
   function bindEvents() {
     // 首页
     document.getElementById('modeSolo').addEventListener('click', function () {
-      picked.level = unlockedMax(picked.setKey, picked.diffKey);
-      buildLevelGrid();
-      UI.showScreen('SELECT');
+      openSelect('solo');
     });
+    document.getElementById('modeSprint').addEventListener('click', function () {
+      openSelect('sprint');
+    });
+    document.getElementById('modeVersus').addEventListener('click', function () {
+      openSelect('versus');
+    });
+
+    document.getElementById('rankTipBtn').addEventListener('click', openRankInfo);
 
     document.getElementById('nickBtn').addEventListener('click', function () {
       UI.promptText('修改昵称', DATA.nickname, 12, function (v) {
@@ -828,9 +1092,7 @@
       refreshHome();
     });
 
-    document.getElementById('startGameBtn').addEventListener('click', function () {
-      Game.start(picked.setKey, picked.diffKey, picked.level, wrongList(picked.setKey));
-    });
+    document.getElementById('startGameBtn').addEventListener('click', launchGame);
 
     // 对局页
     document.getElementById('pauseBtn').addEventListener('click', function () {
@@ -842,17 +1104,22 @@
 
     // 结算页
     document.getElementById('againBtn').addEventListener('click', function () {
-      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level, wrongList(lastConfig.setKey));
+      var mode = lastConfig.mode || 'solo';
+      runBaseCleared = mode === 'solo' ? clearedLevels(lastConfig.setKey, lastConfig.diffKey) : 0;
+      Game.start(lastConfig.setKey, lastConfig.diffKey, lastConfig.level,
+        wrongList(lastConfig.setKey), mode);
     });
 
     document.getElementById('changeSetBtn').addEventListener('click', function () {
       Game.stop();
       picked.setKey = lastConfig.setKey;
       picked.diffKey = lastConfig.diffKey;
+      picked.mode = lastConfig.mode || 'solo';
       picked.level = unlockedMax(picked.setKey, picked.diffKey);
       buildSetCards();
       buildDiffCards();
       buildLevelGrid();
+      applyModeToSelect();
       UI.showScreen('SELECT');
     });
 
@@ -882,6 +1149,7 @@
     buildSetCards();
     buildDiffCards();
     buildLevelGrid();
+    applyModeToSelect();
     bindEvents();
 
     if (DATA.guideSeen) {

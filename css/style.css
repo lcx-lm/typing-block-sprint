@@ -747,3 +747,59 @@ body[data-state="RESULT"] .user-strip{display:none}
 .wb-note{margin-top:10px;font-size:12px;color:var(--dim)}
 [data-theme="light"] .wb-item{background:#fff;border-color:var(--line)}
 [data-theme="light"] .wb-meaning{color:#66788c}
+
+/* ---------------- 段位与积分 ---------------- */
+.user-chip.rank{position:relative;padding-right:16px}
+.rank-tip{
+  position:absolute;top:-6px;right:-6px;width:17px;height:17px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;border:1px solid var(--line-strong);
+  background:var(--panel);color:var(--gold);
+  font-size:11px;font-weight:900;line-height:1;cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.rank-tip:hover{background:var(--gold);color:#1a1205;border-color:var(--gold)}
+
+.rank-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.rank-name{font-size:26px;font-weight:900;letter-spacing:.08em;color:var(--gold)}
+.rank-points{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.rank-points span{font-size:11px;font-weight:700;color:var(--dim2);margin-left:4px}
+.rank-bar{
+  height:8px;margin-top:14px;border-radius:99px;overflow:hidden;
+  background:var(--panel2);border:1px solid var(--line);
+}
+.rank-bar i{
+  display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--acc),var(--acc2));
+  transition:width .3s ease;
+}
+.rank-next{font-size:11.5px;color:var(--dim2);margin-top:7px}
+.rank-record{font-size:12.5px;color:var(--dim);margin-top:12px}
+.rank-rules{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.rank-rules .t{font-size:11px;letter-spacing:.12em;color:var(--dim2);margin-bottom:6px}
+.rank-rules ul{margin:0 0 0 18px;padding:0}
+.rank-rules li{margin:5px 0;font-size:12.5px;line-height:1.6}
+
+/* 选择页模式条 */
+.mode-banner{
+  align-self:flex-start;font-size:11px;font-weight:800;letter-spacing:.1em;
+  color:var(--acc);background:rgba(94,234,212,.08);
+  border:1px solid rgba(94,234,212,.4);border-radius:999px;padding:5px 12px;
+}
+
+/* HUD 与结算的模式差异 */
+.hud-item[hidden]{display:none}
+.result-rank{
+  margin-top:10px;font-size:12px;color:var(--dim);
+  background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;padding:9px 12px;
+}
+.result-rank.up{color:var(--acc);border-color:rgba(94,234,212,.35)}
+.result-rank.down{color:var(--danger);border-color:rgba(251,113,133,.35)}
+
+[data-theme="light"] .rank-tip{background:#fff}
+[data-theme="light"] .mode-banner{background:rgba(15,143,127,.08);border-color:rgba(15,143,127,.35)}
+[data-theme="light"] .rank-bar{background:#eef3f9}
+[data-theme="light"] .result-rank{background:#f5f9fd}
+[data-theme="light"] .result-rank.up{border-color:rgba(15,143,127,.35)}
+[data-theme="light"] .result-rank.down{border-color:rgba(217,69,95,.35)}

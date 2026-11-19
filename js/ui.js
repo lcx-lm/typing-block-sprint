@@ -27,6 +27,10 @@
       e.hudScore = document.getElementById('hudScore');
       e.hudLevel = document.getElementById('hudLevel');
       e.hudTarget = document.getElementById('hudTarget');
+      e.hudLevelItem = document.getElementById('hudLevelItem');
+      e.hudTargetItem = document.getElementById('hudTargetItem');
+      e.hudAiItem = document.getElementById('hudAiItem');
+      e.hudAi = document.getElementById('hudAi');
       e.hudTime = document.getElementById('hudTime');
       e.hudCombo = document.getElementById('hudCombo');
       e.hudInput = document.getElementById('hudInput');
@@ -72,6 +76,13 @@
       e.hudTime.classList.toggle('is-low', d.time <= 10);
       e.hudCombo.textContent = d.combo;
       e.hudInput.textContent = d.input ? d.input : '—';
+
+      // 单机闯关显示关卡与目标；冲刺 / AI 对战隐藏，只保留分数与倒计时
+      var solo = d.mode !== 'sprint' && d.mode !== 'versus';
+      if (e.hudLevelItem) e.hudLevelItem.hidden = !solo;
+      if (e.hudTargetItem) e.hudTargetItem.hidden = !solo;
+      if (e.hudAiItem) e.hudAiItem.hidden = d.mode !== 'versus';
+      if (e.hudAi) e.hudAi.textContent = d.aiScore || 0;
 
       // 生命：3 颗爱心，失去的那颗变成灰色裂纹并播放碎裂动画
       var lives = Math.max(0, Math.min(3, typeof d.lives === 'number' ? d.lives : 3));

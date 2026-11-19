@@ -44,7 +44,11 @@
       <button class="nick-btn" id="nickBtn" title="点击修改昵称">
         <span class="nick-cap">昵称</span><b id="nickLabel">玩家</b>
       </button>
-      <span class="user-chip rank"><span class="chip-cap">段位</span><b>青铜</b></span>
+      <span class="user-chip rank">
+        <span class="chip-cap">段位</span><b id="rankLabel">青铜</b>
+        <button class="rank-tip" id="rankTipBtn" type="button" title="段位与积分说明"
+                aria-label="查看段位与积分说明">!</button>
+      </span>
       <span class="user-chip"><span class="chip-cap">最高分</span><b id="homeBest">0</b></span>
       <span class="user-chip"><span class="chip-cap">最佳 WPM</span><b id="homeBestWpm">0</b></span>
     </div>
@@ -62,19 +66,19 @@
           </div>
           <div class="mode-tag on">可游玩</div>
         </button>
-        <button class="mode-card is-disabled" disabled>
+        <button class="mode-card" id="modeSprint">
           <div class="mode-main">
             <div class="mode-name">限时冲刺</div>
-            <div class="mode-desc">60 秒内冲击最高分</div>
+            <div class="mode-desc">60 秒整库词池，冲击最高分</div>
           </div>
-          <div class="mode-tag">后续版本</div>
+          <div class="mode-tag on">可游玩</div>
         </button>
-        <button class="mode-card is-disabled" disabled>
+        <button class="mode-card" id="modeVersus">
           <div class="mode-main">
             <div class="mode-name">AI 对战</div>
-            <div class="mode-desc">与 AI 抢词对拼</div>
+            <div class="mode-desc">与 AI 同场抢分，60 秒定胜负</div>
           </div>
-          <div class="mode-tag">后续版本</div>
+          <div class="mode-tag on">可游玩</div>
         </button>
       </div>
     </div>
@@ -99,6 +103,8 @@
 
   <!-- ==================== SELECT ==================== -->
   <section class="screen" id="screen-select">
+    <div class="mode-banner" id="modeBanner">单机闯关 · 逐关解锁</div>
+
     <div class="select-head">
       <div class="section-title">选择词库</div>
       <div class="section-note">默认四级，每套词库均为自建示例</div>
@@ -107,15 +113,17 @@
 
     <div class="select-head" style="margin-top:18px">
       <div class="section-title">选择难度</div>
-      <div class="section-note">难度决定下落速度、出块间隔与单词长度上限</div>
+      <div class="section-note" id="diffNote">难度决定下落速度、出块间隔与单词长度上限</div>
     </div>
     <div class="card-grid diff-grid" id="diffGrid"></div>
 
-    <div class="select-head" style="margin-top:18px">
-      <div class="section-title">选择关卡</div>
-      <div class="section-note" id="levelNote">共 50 关，第 1 关已解锁</div>
+    <div id="levelSection">
+      <div class="select-head" style="margin-top:18px">
+        <div class="section-title">选择关卡</div>
+        <div class="section-note" id="levelNote">共 50 关，第 1 关已解锁</div>
+      </div>
+      <div class="level-grid" id="levelGrid"></div>
     </div>
-    <div class="level-grid" id="levelGrid"></div>
 
     <div class="select-actions">
       <button class="btn ghost" id="backHomeBtn">返回首页</button>
@@ -127,8 +135,9 @@
   <section class="screen" id="screen-play">
     <div class="hud">
       <div class="hud-item"><span>分数</span><b id="hudScore">0</b></div>
-      <div class="hud-item"><span>关卡</span><b id="hudLevel">1 / 6</b></div>
-      <div class="hud-item"><span>本关目标</span><b id="hudTarget">0 / 100</b></div>
+      <div class="hud-item" id="hudLevelItem"><span>关卡</span><b id="hudLevel">1 / 6</b></div>
+      <div class="hud-item" id="hudTargetItem"><span>本关目标</span><b id="hudTarget">0 / 100</b></div>
+      <div class="hud-item" id="hudAiItem" hidden><span>AI 对手</span><b id="hudAi">0</b></div>
       <div class="hud-item hud-time"><span>剩余时间</span><b id="hudTime">50s</b></div>
       <div class="hud-item hud-hp">
         <span>生命</span>
@@ -175,6 +184,7 @@
         <span class="record-badge" id="resNew" hidden>破纪录</span>
       </div>
       <div class="result-status" id="resStatus">第 1 / 6 关</div>
+      <div class="result-rank" id="resRank"></div>
       <div class="result-grid">
         <div class="res-item"><span>本局得分</span><b id="resScore">0</b></div>
         <div class="res-item"><span>准确率</span><b id="resAcc">100%</b></div>
