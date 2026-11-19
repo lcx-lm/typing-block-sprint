@@ -623,8 +623,8 @@
   /* ---------------- 排位积分 ---------------- */
   function calcRankOutcome(stats, mode) {
     if (mode === 'sprint') {
-      if (stats.score >= 600) return { delta: 15, result: 'win' };
-      if (stats.score >= 400) return { delta: 5, result: 'win' };
+      if (stats.score >= 550) return { delta: 15, result: 'win' };
+      if (stats.score >= 350) return { delta: 5, result: 'win' };
       return { delta: -8, result: 'lose' };
     }
 
@@ -843,7 +843,7 @@
     [
       '单机闯关：全部通关 +30；通过 3 关及以上 +20；通过 1–2 关 +5；一关未过 −10',
       '单机闯关：每首次通过一关，额外 +10',
-      '限时冲刺：600 分及以上 +15；400–599 分 +5；低于 400 分 −8',
+      '限时冲刺：550 分及以上 +15；350–549 分 +5；低于 350 分 −8',
       'AI 对战：高于 AI +20；与 AI 持平 +5；低于 AI −10',
       '积分最低为 0；段位门槛：青铜 0 / 白银 100 / 黄金 300 / 铂金 600 / 钻石 1000'
     ].forEach(function (text) {

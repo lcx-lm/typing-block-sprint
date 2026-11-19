@@ -9,9 +9,9 @@
 
   /* ---------------- 难度参数（严格按需求） ---------------- */
   var DIFFS = {
-    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 18, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
-    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 24, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
-    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 30, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+    easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8, aiRate: 7,  desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+    normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0, aiRate: 10, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+    hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3, aiRate: 13, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   /* ---------------- 生命与数值 ----------------
