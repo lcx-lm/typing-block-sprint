@@ -731,13 +731,12 @@
     el.innerHTML = '';
     var wrap = document.createElement('div');
     wrap.className = 'shatter-wrap';
+    // 左右两个字各裂成上下两块：先完整停留，再慢慢向两侧倾倒——「失」倒向左、「败」倒向右
     var tiles = [
-      { clip: 'polygon(0 0, 33.33% 0, 33.33% 50%, 0 50%)', to: 'translate(-5px,-4px) rotate(-1.6deg)' },
-      { clip: 'polygon(33.33% 0, 66.67% 0, 66.67% 50%, 33.33% 50%)', to: 'translate(0,-5px) rotate(.8deg)' },
-      { clip: 'polygon(66.67% 0, 100% 0, 100% 50%, 66.67% 50%)', to: 'translate(5px,-3px) rotate(1.8deg)' },
-      { clip: 'polygon(0 50%, 33.33% 50%, 33.33% 100%, 0 100%)', to: 'translate(-4px,4px) rotate(1.4deg)' },
-      { clip: 'polygon(33.33% 50%, 66.67% 50%, 66.67% 100%, 33.33% 100%)', to: 'translate(1px,5px) rotate(-1deg)' },
-      { clip: 'polygon(66.67% 50%, 100% 50%, 100% 100%, 66.67% 100%)', to: 'translate(5px,4px) rotate(-1.8deg)' }
+      { clip: 'polygon(0 0, 50% 0, 47% 48%, 0 54%)', to: 'translate(-12px,0) rotate(-9deg)', origin: '25% 100%' },
+      { clip: 'polygon(0 54%, 47% 48%, 50% 100%, 0 100%)', to: 'translate(-16px,1px) rotate(-6deg)', origin: '25% 100%' },
+      { clip: 'polygon(53% 0, 100% 0, 100% 54%, 53% 48%)', to: 'translate(12px,0) rotate(9deg)', origin: '75% 100%' },
+      { clip: 'polygon(53% 48%, 100% 54%, 100% 100%, 53% 100%)', to: 'translate(16px,1px) rotate(6deg)', origin: '75% 100%' }
     ];
     for (var i = 0; i < tiles.length; i++) {
       var s = document.createElement('span');
@@ -746,7 +745,8 @@
       s.style.webkitClipPath = tiles[i].clip;
       s.style.clipPath = tiles[i].clip;
       s.style.setProperty('--to', tiles[i].to);
-      s.style.setProperty('--delay', (i * 0.035) + 's');
+      s.style.setProperty('--origin', tiles[i].origin);
+      s.style.setProperty('--delay', (i * 0.07) + 's');
       wrap.appendChild(s);
     }
     for (var j = 0; j < 10; j++) {
@@ -755,7 +755,7 @@
       d.style.setProperty('--dx', (Math.random() * 180 - 90) + 'px');
       d.style.setProperty('--dy', (Math.random() * 130 - 30) + 'px');
       d.style.setProperty('--dr', (Math.random() * 420 - 210) + 'deg');
-      d.style.setProperty('--delay', (0.26 + Math.random() * 0.22) + 's');
+      d.style.setProperty('--delay', (1.05 + Math.random() * 0.3) + 's');
       wrap.appendChild(d);
     }
     el.appendChild(wrap);

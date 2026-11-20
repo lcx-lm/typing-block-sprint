@@ -299,57 +299,164 @@
         if (s < min) min = s;
         total += s;
       });
-
-      var span = Math.max(1, max - min);
-      var W = 300;
-      var H = 78;
-      var PAD = 8;
-      var step = (W - PAD * 2) / (data.length - 1);
-      var pts = data.map(function (d, i) {
-        var x = PAD + i * step;
-        var y = PAD + (1 - ((d.score || 0) - min) / span) * (H - PAD * 2);
-        return [x, y];
-      });
+      var avg = total / data.length;
 
       var NS = 'http://www.w3.org/2000/svg';
+      // 宽度取容器实际像素，文字不随留白被放大；容器隐藏时退回 1000
+      var W = Math.max(320, Math.round(container.clientWidth || 0) || 1000);
+      var H = 168;
+      var padL = 44;
+      var padR = 14;
+      var padT = 16;
+      var padB = 26;
+      var innerW = W - padL - padR;
+      var innerH = H - padT - padB;
+
+      // 纵轴范围：在最低/最高分外留一点余量，避免折线贴边
+      var raw = Math.max(1, max - min);
+      var lo = Math.max(0, Math.floor(min - raw * 0.2));
+      var hi = Math.ceil(max + raw * 0.2);
+      if (hi - lo < 1) hi = lo + 1;
+
+      var step = innerW / (data.length - 1);
+      var yOf = function (v) {
+        return padT + (1 - (v - lo) / (hi - lo)) * innerH;
+      };
+      var pts = data.map(function (d, i) {
+        return {
+          x: padL + i * step,
+          y: yOf(d.score || 0),
+          score: d.score || 0,
+          date: d.date || ''
+        };
+      });
+
+      var chart = document.createElement('div');
+      chart.className = 'trend-chart';
+
       var svg = document.createElementNS(NS, 'svg');
       svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
       svg.setAttribute('class', 'trend-svg');
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', '最近 ' + data.length + ' 局得分走势');
+      svg.setAttribute('aria-label', '最近 ' + data.length + ' 局得分走势，平均 ' + Math.round(avg) + ' 分');
+
+      function node(name, attrs, cls) {
+        var n = document.createElementNS(NS, name);
+        if (attrs) {
+          for (var k in attrs) n.setAttribute(k, attrs[k]);
+        }
+        if (cls) n.setAttribute('class', cls);
+        return n;
+      }
+
+      // 纵轴：三条横向网格线与分数刻度
+      [hi, Math.round((hi + lo) / 2), lo].forEach(function (v) {
+        var gy = yOf(v);
+        svg.appendChild(node('line', { x1: padL, x2: W - padR, y1: gy, y2: gy }, 'trend-grid'));
+        var tick = node('text', { x: padL - 7, y: gy + 4, 'text-anchor': 'end' }, 'trend-tick');
+        tick.textContent = v;
+        svg.appendChild(tick);
+      });
+
+      // 坐标轴：竖轴为分数，横轴为时间先后
+      svg.appendChild(node('line', { x1: padL, x2: padL, y1: padT, y2: H - padB }, 'trend-axis'));
+      svg.appendChild(node('line', { x1: padL, x2: W - padR, y1: H - padB, y2: H - padB }, 'trend-axis'));
+
+      var used = {};
+      [0, Math.floor((data.length - 1) / 2), data.length - 1].forEach(function (i) {
+        if (used[i]) return;
+        used[i] = true;
+        var p = pts[i];
+        var label = node('text', {
+          x: p.x,
+          y: H - padB + 15,
+          'text-anchor': i === 0 ? 'start' : (i === data.length - 1 ? 'end' : 'middle')
+        }, 'trend-tick');
+        label.textContent = p.date ? p.date.slice(5, 10) : ('第 ' + (i + 1) + ' 局');
+        svg.appendChild(label);
+      });
 
       // 折线下方的面积
-      var dPath = 'M ' + pts[0][0].toFixed(1) + ' ' + (H - PAD);
+      var dPath = 'M ' + pts[0].x.toFixed(1) + ' ' + (H - padB);
       pts.forEach(function (p) {
-        dPath += ' L ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+        dPath += ' L ' + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
       });
-      dPath += ' L ' + pts[pts.length - 1][0].toFixed(1) + ' ' + (H - PAD) + ' Z';
-      var area = document.createElementNS(NS, 'path');
-      area.setAttribute('d', dPath);
-      area.setAttribute('class', 'trend-area');
-      svg.appendChild(area);
+      dPath += ' L ' + pts[pts.length - 1].x.toFixed(1) + ' ' + (H - padB) + ' Z';
+      svg.appendChild(node('path', { d: dPath }, 'trend-area'));
 
-      var line = document.createElementNS(NS, 'polyline');
-      line.setAttribute('points', pts.map(function (p) {
-        return p[0].toFixed(1) + ',' + p[1].toFixed(1);
-      }).join(' '));
-      line.setAttribute('class', 'trend-line');
-      svg.appendChild(line);
+      // 折线
+      svg.appendChild(node('polyline', {
+        points: pts.map(function (p) {
+          return p.x.toFixed(1) + ',' + p.y.toFixed(1);
+        }).join(' ')
+      }, 'trend-line'));
 
+      // 平均线
+      var avgY = yOf(avg);
+      svg.appendChild(node('line', { x1: padL, x2: W - padR, y1: avgY, y2: avgY }, 'trend-avg'));
+      var avgLabel = node('text', { x: W - padR, y: avgY - 5, 'text-anchor': 'end' }, 'trend-avg-label');
+      avgLabel.textContent = '平均 ' + Math.round(avg);
+      svg.appendChild(avgLabel);
+
+      // 数据点
+      var dots = [];
       pts.forEach(function (p, i) {
-        var dot = document.createElementNS(NS, 'circle');
-        dot.setAttribute('cx', p[0].toFixed(1));
-        dot.setAttribute('cy', p[1].toFixed(1));
-        dot.setAttribute('r', i === pts.length - 1 ? 3.4 : 2);
-        dot.setAttribute('class', i === pts.length - 1 ? 'trend-dot is-last' : 'trend-dot');
+        var isLast = i === pts.length - 1;
+        var dot = node('circle', {
+          cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: isLast ? 3.6 : 2.6
+        }, 'trend-dot' + (isLast ? ' is-last' : ''));
         svg.appendChild(dot);
+        dots.push(dot);
       });
 
-      container.appendChild(svg);
+      // 悬停 / 键盘聚焦时显示的分数气泡
+      var tip = document.createElement('div');
+      tip.className = 'trend-tip';
+      tip.setAttribute('aria-hidden', 'true');
+
+      function showTip(i) {
+        var p = pts[i];
+        tip.innerHTML = '';
+        var b = document.createElement('b');
+        b.textContent = p.score;
+        var sub = document.createElement('span');
+        sub.textContent = p.date || ('第 ' + (i + 1) + ' 局');
+        tip.appendChild(b);
+        tip.appendChild(sub);
+        tip.style.left = (p.x / W * 100) + '%';
+        tip.style.top = (p.y / H * 100) + '%';
+        tip.className = 'trend-tip is-show' +
+          (i === 0 ? ' is-left' : (i === pts.length - 1 ? ' is-right' : ''));
+        dots.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
+      }
+      function hideTip() {
+        tip.className = 'trend-tip';
+        dots.forEach(function (d) { d.classList.remove('is-active'); });
+      }
+
+      // 命中区比圆点大，鼠标和 Tab 键都能触发
+      pts.forEach(function (p, i) {
+        var hit = node('circle', {
+          cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: 14,
+          tabindex: '0', role: 'button'
+        }, 'trend-hit');
+        hit.setAttribute('aria-label', '第 ' + (i + 1) + ' 局，' + p.score + ' 分' +
+          (p.date ? '，' + p.date : ''));
+        hit.addEventListener('mouseenter', function () { showTip(i); });
+        hit.addEventListener('mouseleave', hideTip);
+        hit.addEventListener('focus', function () { showTip(i); });
+        hit.addEventListener('blur', hideTip);
+        hit.addEventListener('click', function () { showTip(i); });
+        svg.appendChild(hit);
+      });
+
+      chart.appendChild(svg);
+      chart.appendChild(tip);
+      container.appendChild(chart);
 
       if (this.els.trendSum) {
         this.els.trendSum.textContent = '近 ' + data.length + ' 局 · 最高 ' + max +
-          ' · 平均 ' + Math.round(total / data.length);
+          ' · 平均 ' + Math.round(avg);
       }
     },
 
