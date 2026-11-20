@@ -83,18 +83,13 @@
       </div>
     </div>
 
-    <div class="panel lb-panel">
-      <div class="panel-head">
-        <div class="panel-title">排行榜 · Top 5</div>
-        <button class="text-btn" id="viewAllBtn">查看全部</button>
-      </div>
-      <div class="lb-wrap" id="homeLb"></div>
-    </div>
-
     <div class="panel trend-panel">
       <div class="panel-head">
         <div class="panel-title">最近表现</div>
-        <span class="panel-sub" id="trendSum"></span>
+        <div class="panel-tools">
+          <span class="panel-sub" id="trendSum"></span>
+          <button class="text-btn" id="historyBtn">查看详细</button>
+        </div>
       </div>
       <div class="trend-wrap" id="homeTrend"></div>
     </div>
@@ -297,7 +292,7 @@
     <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
       <div class="welcome-eyebrow">字块冲刺 · 新手报到</div>
       <h1 class="welcome-title" id="welcomeTitle">欢迎来到字块冲刺</h1>
-      <p class="welcome-note">先给自己起个昵称，排行榜和成绩会记在这个名字下。</p>
+      <p class="welcome-note">先给自己起个昵称，最高分和成绩记录会记在这个名字下。</p>
 
       <label class="welcome-label" for="welcomeInput">你的昵称</label>
       <input class="welcome-input" id="welcomeInput" type="text" maxlength="12" value="玩家"

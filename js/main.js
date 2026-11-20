@@ -12,7 +12,6 @@
     nickname: '玩家',
     bestScore: 0,
     bestWpm: 0,
-    leaderboard: [],
     settings: { sound: true, theme: 'light' },
     helpSeen: false,
     guideSeen: false,
@@ -63,11 +62,6 @@
     DATA.nickname = ST.get('nickname', '玩家') || '玩家';
     DATA.bestScore = parseInt(ST.get('bestScore', '0'), 10) || 0;
     DATA.bestWpm = parseInt(ST.get('bestWpm', '0'), 10) || 0;
-
-    var lb = ST.getJSON('leaderboard', []);
-    DATA.leaderboard = Array.isArray(lb) ? lb.filter(function (r) {
-      return r && typeof r === 'object' && typeof r.score === 'number';
-    }) : [];
 
     var settings = ST.getJSON('settings', { sound: true, theme: 'light' });
     DATA.settings = {
@@ -208,16 +202,6 @@
     }
   }
 
-  function saveLeaderboard() {
-    // 分数降序；同分按 WPM 降序；最多保留 10 条
-    DATA.leaderboard.sort(function (a, b) {
-      if (b.score !== a.score) return b.score - a.score;
-      return b.wpm - a.wpm;
-    });
-    DATA.leaderboard = DATA.leaderboard.slice(0, 10);
-    ST.setJSON('leaderboard', DATA.leaderboard);
-  }
-
   function formatDate(d) {
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
@@ -235,7 +219,7 @@
     '敲错一个字母只会清空连击，不扣爱心，别慌。屏幕上方有 3 颗爱心，方块掉到底部就会碎掉一颗。',
     '连续正确消除会累积连击，连击越高，单次得分加成越高。但一旦敲错，连击归零，所以稳比快更重要。',
     '每关限时 50 秒，第一关大约打掉 10 个词就能过关，之后目标逐关提高。通过后会自动解锁下一关，下次进来可以直接选已通关的关卡。',
-    '每局结束会结算得分、准确率、WPM 和最高连击，成绩会进本地排行榜。准备好了吗？点击开始游戏。'
+    '每局结束会结算得分、准确率、WPM 和最高连击，成绩会存进「最近表现」记录。准备好了吗？点击开始游戏。'
   ];
 
   var ONBOARD = {
@@ -442,7 +426,6 @@
     UI.updateNickname(DATA.nickname);
     UI.updateHomeStats(DATA.bestScore, DATA.bestWpm);
     updateRankChip();
-    UI.renderLeaderboard(UI.els.homeLb, DATA.leaderboard, 5);
     UI.renderTrend(UI.els.homeTrend, DATA.history);
     renderWrongBook();
   }
@@ -881,18 +864,8 @@
       ST.set('bestWpm', DATA.bestWpm);
     }
 
-    // 写入排行榜（错词复习不参与排名）
+    // 写入成绩记录（错词复习不计入）
     if (!isReview) {
-      DATA.leaderboard.push({
-        name: DATA.nickname,
-        score: stats.score,
-        wpm: stats.wpm,
-        accuracy: stats.accuracy,
-        date: formatDate(new Date())
-      });
-      saveLeaderboard();
-
-      // 成绩历史：仅保留最近 20 局，用于首页趋势图
       DATA.history.push({
         score: stats.score,
         wpm: stats.wpm,
@@ -1201,11 +1174,12 @@
     });
   }
 
-  function openLeaderboard() {
+  function openHistory() {
     var wrap = document.createElement('div');
-    UI.renderLeaderboard(wrap, DATA.leaderboard, 10);
+    wrap.className = 'history-wrap';
+    UI.renderHistory(wrap, DATA.history);
     UI.openModal({
-      title: '排行榜 · Top 10',
+      title: '全部记录',
       content: wrap,
       actions: [{ label: '关闭', onClick: function () { UI.closeModal(); } }]
     });
@@ -1285,33 +1259,17 @@
     });
     wrap.appendChild(btnGuide);
 
-    // 清空排行榜
-    var btnClear = document.createElement('button');
-    btnClear.className = 'btn ghost small';
-    btnClear.textContent = '清空排行榜';
-    btnClear.style.marginTop = '14px';
-    btnClear.addEventListener('click', function () {
-      UI.confirm('清空排行榜', '将删除全部排行榜记录，且无法恢复。确定继续？', function () {
-        DATA.leaderboard = [];
-        ST.setJSON('leaderboard', DATA.leaderboard);
-        refreshHome();
-        UI.toast('排行榜已清空');
-      });
-    });
-    wrap.appendChild(btnClear);
-
     // 重置所有数据
     var btnReset = document.createElement('button');
     btnReset.className = 'btn ghost small';
     btnReset.textContent = '重置所有数据';
-    btnReset.style.marginTop = '8px';
+    btnReset.style.marginTop = '14px';
     btnReset.addEventListener('click', function () {
-      UI.confirm('重置所有数据', '昵称、最高分、排行榜、段位积分、设置、关卡解锁进度、错词本与新手引导进度都会被清空，下次进入将重新走引导。确定继续？', function () {
+      UI.confirm('重置所有数据', '昵称、最高分、成绩记录、段位积分、设置、关卡解锁进度、错词本与新手引导进度都会被清空，下次进入将重新走引导。确定继续？', function () {
         ST.resetAll();
         DATA.nickname = '玩家';
         DATA.bestScore = 0;
         DATA.bestWpm = 0;
-        DATA.leaderboard = [];
         DATA.settings = { sound: true, theme: 'light' };
         DATA.helpSeen = false;
         DATA.guideSeen = false;
@@ -1363,7 +1321,7 @@
 
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('helpBtn').addEventListener('click', openHelp);
-    document.getElementById('viewAllBtn').addEventListener('click', openLeaderboard);
+    document.getElementById('historyBtn').addEventListener('click', openHistory);
 
     // 错词本：直接以当前词库的错词开一局 60 秒复习
     document.getElementById('reviewWrongBtn').addEventListener('click', function () {

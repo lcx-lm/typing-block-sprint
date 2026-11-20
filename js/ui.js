@@ -72,7 +72,6 @@
       e.nickLabel = document.getElementById('nickLabel');
       e.homeBest = document.getElementById('homeBest');
       e.homeBestWpm = document.getElementById('homeBestWpm');
-      e.homeLb = document.getElementById('homeLb');
       e.homeTrend = document.getElementById('homeTrend');
       e.trendSum = document.getElementById('trendSum');
       this._combo = 0;
@@ -211,10 +210,11 @@
       }, 1700);
     },
 
-    /* ---------------- 排行榜表格 ---------------- */
-    renderLeaderboard: function (container, records, limit) {
+    /* ---------------- 成绩记录表格 ---------------- */
+    renderHistory: function (container, records) {
       container.innerHTML = '';
-      var list = (records || []).slice(0, limit || 10);
+      // 最新的一局排在最前
+      var list = (records || []).slice().reverse();
 
       if (!list.length) {
         var empty = document.createElement('div');
@@ -224,12 +224,14 @@
         return;
       }
 
+      var MODE_NAME = { solo: '单机闯关', sprint: '限时冲刺', versus: 'AI 对战' };
+
       var table = document.createElement('table');
       table.className = 'lb-table';
 
       var thead = document.createElement('thead');
       var htr = document.createElement('tr');
-      ['#', '昵称', '分数', 'WPM', '准确率', '日期'].forEach(function (title) {
+      ['日期', '模式', '得分', 'WPM', '准确率'].forEach(function (title) {
         var th = document.createElement('th');
         th.textContent = title;
         htr.appendChild(th);
@@ -238,17 +240,17 @@
       table.appendChild(thead);
 
       var tbody = document.createElement('tbody');
-      list.forEach(function (rec, i) {
+      list.forEach(function (rec) {
         var tr = document.createElement('tr');
 
-        var tdRank = document.createElement('td');
-        tdRank.className = 'num';
-        tdRank.textContent = i + 1;
-        tr.appendChild(tdRank);
+        var tdDate = document.createElement('td');
+        tdDate.className = 'lb-date';
+        tdDate.textContent = rec.date || '—';
+        tr.appendChild(tdDate);
 
-        var tdName = document.createElement('td');
-        tdName.textContent = rec.name || '玩家';
-        tr.appendChild(tdName);
+        var tdMode = document.createElement('td');
+        tdMode.textContent = MODE_NAME[rec.mode] || '单机闯关';
+        tr.appendChild(tdMode);
 
         var tdScore = document.createElement('td');
         tdScore.className = 'num';
@@ -264,10 +266,6 @@
         tdAcc.className = 'num';
         tdAcc.textContent = rec.accuracy + '%';
         tr.appendChild(tdAcc);
-
-        var tdDate = document.createElement('td');
-        tdDate.textContent = rec.date || '—';
-        tr.appendChild(tdDate);
 
         tbody.appendChild(tr);
       });
