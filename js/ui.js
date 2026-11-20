@@ -44,6 +44,7 @@
       e.modalRoot = document.getElementById('modalRoot');
 
       e.hudScore = document.getElementById('hudScore');
+      e.hudScoreLabel = document.getElementById('hudScoreLabel');
       e.hudLevel = document.getElementById('hudLevel');
       e.hudTarget = document.getElementById('hudTarget');
       e.hudLevelItem = document.getElementById('hudLevelItem');
@@ -104,7 +105,10 @@
     /* ---------------- HUD ---------------- */
     updateHUD: function (d) {
       var e = this.els;
-      e.hudScore.textContent = d.score;
+      // 单机闯关按关卡独立计分，左上角只显示本关得分；其他模式显示整局总分
+      var solo = d.mode === 'solo';
+      e.hudScore.textContent = solo ? d.levelScore : d.score;
+      if (e.hudScoreLabel) e.hudScoreLabel.textContent = solo ? '本关分数' : '分数';
       e.hudLevel.textContent = d.level + ' / ' + d.levelTotal;
       e.hudTarget.textContent = d.levelScore + ' / ' + d.levelTarget;
       e.hudTime.textContent = d.time + 's';
@@ -124,7 +128,6 @@
       e.hudInput.textContent = d.input ? d.input : '—';
 
       // 单机闯关显示关卡与目标；冲刺 / AI 对战 / 错词复习隐藏
-      var solo = d.mode === 'solo';
       if (e.hudLevelItem) e.hudLevelItem.hidden = !solo;
       if (e.hudTargetItem) e.hudTargetItem.hidden = !solo;
       if (e.hudAiItem) e.hudAiItem.hidden = d.mode !== 'versus';

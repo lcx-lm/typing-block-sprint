@@ -663,10 +663,11 @@
       return { delta: -10, result: 'lose' };
     }
 
-    // 主动退出且本关已消除过单词：视为本关没有通过，直接按失败扣分。
-    // 不把本局前面已通过的关卡折算成 +5/+20 加分，否则「刚打两三个词没达标就退出」也能涨分。
+    // 主动退出且本关已消除过单词 / 爱心耗尽 / 时间到：只要本关没有通过，
+    // 一律按本关失败结算 −10，不把本局前面已通过的关卡折算成 +5/+20 加分，
+    // 否则「本关没达标、只是累计分高」也会被判成胜场加积分。
     // 从通关弹窗点「退出」时本关已经通过（quitCleared），仍按正常通关结算。
-    if (stats.failReason === 'quit' && !stats.quitCleared) {
+    if (!stats.win && !stats.quitCleared) {
       return { delta: -10, result: 'lose', bonus: 0 };
     }
 
@@ -676,19 +677,15 @@
       ? Math.max(0, stats.cleared - (stats.startLevel || 1) + 1)
       : 0;
 
+    // 走完最后一关：+30；从通关弹窗退出：按本局通过关数给 +20 / +5
     var delta;
-    var result = 'lose';
+    var result = 'win';
     if (stats.win) {
       delta = 30;
-      result = 'win';
     } else if (runCleared >= 3) {
       delta = 20;
-      result = 'win';
-    } else if (runCleared >= 1) {
-      delta = 5;
-      result = 'win';
     } else {
-      delta = -10;
+      delta = 5;
     }
 
     // 本局首次通关的关卡，每关额外 +10
@@ -812,6 +809,7 @@
       cleared: info.cleared,
       startLevel: info.startLevel,
       win: !!info.isFinal,
+      quitCleared: !info.isFinal,
       wordsCleared: 1,
       failReason: 'time'
     }, 'solo');
