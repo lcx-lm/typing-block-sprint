@@ -715,6 +715,7 @@
 
     // 段位积分先结算，保持与结算页展示一致
     var isReview = mode === 'review';
+    var beforePoints = DATA.rankPoints;
     var outcome = isReview ? { delta: 0, result: 'none', bonus: 0 } : calcRankOutcome(stats, mode);
     var afterRank = isReview ? rankOf(DATA.rankPoints) : applyRankResult(outcome.delta, outcome.result);
 
@@ -805,16 +806,57 @@
     }
     status.classList.toggle('is-win', winView);
 
-    // 段位积分变化
-    var rankEl = document.getElementById('resRank');
-    if (isReview) {
-      rankEl.textContent = '错词复习不计段位积分';
-      rankEl.classList.remove('up', 'down');
+    // 大字结论：胜利 / 失败 / 通关 等，放在结算页中间
+    var verdict = document.getElementById('resVerdict');
+    var bigText, bigCls;
+    if (mode === 'review') {
+      bigText = stats.failReason === 'lives' ? '复习结束' : '复习完成';
+      bigCls = 'is-mid';
+    } else if (mode === 'sprint') {
+      if (stats.failReason === 'quit') { bigText = '已退出'; bigCls = 'is-mid'; }
+      else if (outcome.delta > 0) { bigText = '达标'; bigCls = 'is-win'; }
+      else { bigText = '未达标'; bigCls = 'is-lose'; }
+    } else if (mode === 'versus') {
+      bigText = cmp;
+      bigCls = cmp === '胜利' ? 'is-win' : (cmp === '失败' ? 'is-lose' : 'is-mid');
     } else {
-      rankEl.textContent = '段位积分 ' + (outcome.delta > 0 ? '+' : '') + outcome.delta +
-        ' · 当前 ' + afterRank.name + '（' + DATA.rankPoints + ' 分）';
-      rankEl.classList.toggle('up', outcome.delta > 0);
-      rankEl.classList.toggle('down', outcome.delta < 0);
+      if (stats.win) { bigText = '全部通关'; bigCls = 'is-win'; }
+      else if (stats.failReason === 'quit') { bigText = '已退出'; bigCls = 'is-mid'; }
+      else if (stats.failReason === 'time') { bigText = '时间到'; bigCls = winView ? 'is-win' : 'is-lose'; }
+      else { bigText = '失败'; bigCls = 'is-lose'; }
+    }
+    verdict.textContent = bigText;
+    verdict.className = 'result-verdict ' + bigCls;
+
+    // 第二步：段位积分变化与进度条
+    var summaryEl = document.getElementById('resRankSummary');
+    var progEl = document.getElementById('resRankProgress');
+    var reviewNote = document.getElementById('resReviewNote');
+    if (isReview) {
+      summaryEl.hidden = true;
+      progEl.hidden = true;
+      reviewNote.hidden = false;
+    } else {
+      summaryEl.hidden = false;
+      progEl.hidden = false;
+      reviewNote.hidden = true;
+
+      document.getElementById('resRankBefore').textContent = beforePoints;
+      var deltaEl = document.getElementById('resRankDelta');
+      deltaEl.textContent = (outcome.delta > 0 ? '+' : '') + outcome.delta;
+      deltaEl.className = 'rs-op ' + (outcome.delta > 0 ? 'up' : (outcome.delta < 0 ? 'down' : 'flat'));
+      document.getElementById('resRankAfter').textContent = DATA.rankPoints;
+      document.getElementById('resRankName').textContent = afterRank.name;
+
+      var pct = 100;
+      var progText = '已达到最高段位';
+      if (afterRank.next) {
+        var rspan = afterRank.next.min - afterRank.min;
+        pct = Math.max(0, Math.min(100, ((DATA.rankPoints - afterRank.min) / rspan) * 100));
+        progText = '距 ' + afterRank.next.name + ' 还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
+      }
+      document.getElementById('resRankProgressText').textContent = progText;
+      document.getElementById('resRankFill').style.width = pct + '%';
     }
 
     // 破纪录标记：两种状态都给明确文案（复习局不参与记录）
@@ -847,6 +889,10 @@
       none.textContent = '本局没有打错的单词，漂亮';
       wrap.appendChild(none);
     }
+
+    // 每次结算都先回到第一步
+    document.getElementById('resStep1').classList.add('is-active');
+    document.getElementById('resStep2').classList.remove('is-active');
 
     UI.showScreen('RESULT');
   }
@@ -1189,6 +1235,10 @@
     });
     document.getElementById('quitGameBtn').addEventListener('click', function () {
       Game.quit();
+    });
+    document.getElementById('resNextBtn').addEventListener('click', function () {
+      document.getElementById('resStep1').classList.remove('is-active');
+      document.getElementById('resStep2').classList.add('is-active');
     });
 
     // 结算页
