@@ -330,13 +330,20 @@ body[data-state="RESULT"] .user-strip{display:none}
   background:linear-gradient(180deg,#ffd66b,#f5a623);
   border-radius:999px;padding:3px 10px;
 }
-.record-badge.plain{
-  background:none;color:var(--dim2);
-  border:1px solid var(--line);font-weight:700;
-}
 .result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
 .result-grid[hidden],.vs-table[hidden],.res-item[hidden],.record-badge[hidden],.res-record-row[hidden]{display:none}
-.result-grid.is-two{grid-template-columns:repeat(2,1fr)}
+/* AI 对战：双方比分放大，并附一句领先 / 落后说明 */
+.result-vs-score{margin-top:8px;text-align:center}
+.vs-score-nums{display:flex;align-items:baseline;justify-content:center;gap:12px;font-variant-numeric:tabular-nums}
+.vs-score-nums b{font-size:40px;font-weight:900;line-height:1;letter-spacing:.02em;color:var(--tx)}
+.vs-score-nums i{font-style:normal;font-size:24px;font-weight:900;color:var(--dim2)}
+.vs-score-gap{margin-top:6px;font-size:12.5px;font-weight:700;letter-spacing:.04em;color:var(--dim)}
+.vs-score-gap.is-win{color:var(--acc)}
+.vs-score-gap.is-lose{color:var(--danger)}
+.vs-score-gap.is-mid{color:var(--gold)}
+/* 限时冲刺：历史最佳作为对比放在卡片下方 */
+.res-best{margin-top:10px;text-align:center;font-size:11.5px;color:var(--dim2);letter-spacing:.02em}
+.res-best b{font-weight:800;color:var(--dim);font-variant-numeric:tabular-nums}
 .vs-table{margin-top:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
 .vs-row{
   display:grid;grid-template-columns:1.3fr 1fr 1fr;align-items:center;
@@ -347,7 +354,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 .vs-row b{text-align:center;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--tx)}
 .vs-head{background:rgba(255,255,255,.03)}
 .vs-head b{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);font-weight:800}
-.result-status{margin-top:10px;font-size:12.5px;color:var(--dim);letter-spacing:.02em}
+.result-status{margin-top:10px;font-size:12.5px;color:var(--dim);letter-spacing:.02em;text-align:center}
 .result-status.is-win{color:var(--acc);font-weight:800}
 .res-item{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
 .res-item span{display:block;font-size:10px;color:var(--dim2);letter-spacing:.12em;margin-bottom:4px}
@@ -361,6 +368,7 @@ body[data-state="RESULT"] .user-strip{display:none}
   border-radius:7px;padding:3px 9px;
 }
 .wrong-none{font-size:12px;color:var(--dim2)}
+.wrong-hint{margin-top:8px;font-size:11px;color:var(--dim2);line-height:1.6}
 .result-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
 .result-actions.is-center{justify-content:center}
 .result-step{display:none}
@@ -759,7 +767,6 @@ body[data-state="RESULT"] .user-strip{display:none}
 [data-theme="light"] .pause-note{color:var(--dim)}
 
 [data-theme="light"] .record-badge{color:#4a2b02;background:linear-gradient(180deg,#ffd66b,#f0a81f)}
-[data-theme="light"] .record-badge.plain{background:none;color:var(--dim2);border-color:var(--line)}
 [data-theme="light"] .res-item{background:#f5f9fd;border-color:var(--line)}
 [data-theme="light"] .res-item span{color:var(--dim2)}
 [data-theme="light"] .res-item b{color:var(--acc)}

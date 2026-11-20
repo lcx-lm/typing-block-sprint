@@ -921,23 +921,20 @@
     document.getElementById('resWpm').textContent = stats.wpm + ' 词/分';
     document.getElementById('resCombo').textContent = stats.maxCombo;
 
-    // 第一步数据区按模式统一排版：关卡/复习四项，冲刺得分+最佳打字速度，AI 对战换成左右对比表
+    // 第一步数据区：所有模式统一四项本局指标；冲刺在卡片下方补一行历史最佳做对比
     var gridEl = document.getElementById('resGrid');
     var vsEl = document.getElementById('resVsTable');
+    var bestEl = document.getElementById('resBest');
     document.getElementById('resCap1').textContent = '本局得分';
     document.getElementById('resCap2').textContent = '本局准确率';
     document.getElementById('resItem3').hidden = false;
     document.getElementById('resItem4').hidden = false;
     gridEl.hidden = false;
-    gridEl.classList.remove('is-two');
     vsEl.hidden = true;
+    bestEl.hidden = mode !== 'sprint';
     if (mode === 'sprint') {
-      // 冲刺只展示得分 + 最佳打字速度，两列铺满
-      gridEl.classList.add('is-two');
-      document.getElementById('resCap2').textContent = '最佳打字速度';
-      document.getElementById('resAcc').textContent = DATA.bestWpm + ' 词/分';
-      document.getElementById('resItem3').hidden = true;
-      document.getElementById('resItem4').hidden = true;
+      document.getElementById('resBestScore').textContent = DATA.bestScore;
+      document.getElementById('resBestWpm').textContent = DATA.bestWpm;
     } else if (mode === 'versus') {
       gridEl.hidden = true;
       vsEl.hidden = false;
@@ -949,9 +946,10 @@
       document.getElementById('vsAiLives').textContent = stats.aiLives;
     }
 
-    // 结算状态：按模式区分文案
+    // 结算状态：按模式区分文案；AI 对战同时算出胜负方，供比分区复用
     var status = document.getElementById('resStatus');
     var winView;
+    var vsWinner = null;
     if (mode === 'review') {
       status.textContent = '错词复习 · 60 秒打掉 ' + stats.wordsCleared + ' 个错词' +
         (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '') +
@@ -963,24 +961,28 @@
         (stats.failReason === 'quit' ? ' · 主动退出' : '');
       winView = outcome.delta > 0;
     } else if (mode === 'versus') {
-      var vWinner = stats.versusWinner ||
+      vsWinner = stats.versusWinner ||
         (stats.score > stats.aiScore ? 'player' : (stats.score === stats.aiScore ? 'draw' : 'ai'));
-      var cmp = vWinner === 'player' ? '胜利' : (vWinner === 'draw' ? '平局' : '失败');
-      var why = '';
+      var cmp = vsWinner === 'player' ? '胜利' : (vsWinner === 'draw' ? '平局' : '失败');
+      // 不同结束原因用不同辅助文案，避免所有结果都只说「胜利 / 失败」
+      var why;
       if (stats.failReason === 'ko') {
-        why = vWinner === 'player' ? '拔河压制' : '被 AI 压制';
+        why = vsWinner === 'player' ? '成功压制 AI' : '被 AI 反超';
       } else if (stats.failReason === 'aiLives') {
-        why = 'AI 爱心碎完';
+        why = 'AI 爱心耗尽';
       } else if (stats.failReason === 'lives') {
-        why = '你的爱心碎完';
+        why = '你的爱心耗尽';
       } else if (stats.failReason === 'quit') {
         why = '你退出了本局';
+      } else if (vsWinner === 'draw') {
+        why = '双方势均力敌';
+      } else if (vsWinner === 'player') {
+        why = '时间到，比分领先';
       } else {
-        why = '时间到，按比分判定';
+        why = '时间到，比分落后';
       }
-      status.textContent = 'AI 对战 · 你 ' + stats.score + ' : ' + stats.aiScore +
-        ' AI · ' + cmp + '（' + why + '）';
-      winView = vWinner === 'player';
+      status.textContent = 'AI 对战 · ' + why;
+      winView = vsWinner === 'player';
     } else {
       var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
       if (stats.win) {
@@ -1003,9 +1005,9 @@
       bigText = stats.failReason === 'lives' ? '复习结束' : '复习完成';
       bigCls = 'is-mid';
     } else if (mode === 'sprint') {
-      // 冲刺按是否刷新最高分给出结论
-      bigText = isNewRecord ? '破纪录' : '未破纪录';
-      bigCls = isNewRecord ? 'is-win' : 'is-lose';
+      // 冲刺不再把「未破纪录」当成失败，统一显示挑战完成；破纪录只用金色徽章提示
+      bigText = '挑战完成';
+      bigCls = 'is-win';
     } else if (mode === 'versus') {
       bigText = cmp;
       bigCls = cmp === '胜利' ? 'is-win' : (cmp === '失败' ? 'is-lose' : 'is-mid');
@@ -1018,12 +1020,34 @@
     var dropMs = renderVerdict(verdict, bigText, bigCls);
 
     // 单机因爱心碎完失败时，把「第一关」移到「失败」上方并居中；其它情况放回大字下方
+    // AI 对战的大字下方先是比分，状态行要排在比分之后
     if (mode === 'solo' && !stats.win && stats.failReason !== 'quit' && stats.failReason !== 'time') {
       verdict.parentNode.insertBefore(status, verdict);
       status.classList.add('is-above');
     } else {
-      verdict.parentNode.insertBefore(status, verdict.nextSibling);
+      var statusBefore = mode === 'versus' ? document.getElementById('resVsScore') : verdict;
+      statusBefore.parentNode.insertBefore(status, statusBefore.nextSibling);
       status.classList.remove('is-above');
+    }
+
+    // AI 对战：放大双方比分，并直接说明领先 / 落后多少
+    var vsScoreEl = document.getElementById('resVsScore');
+    vsScoreEl.hidden = mode !== 'versus';
+    if (mode === 'versus') {
+      var gap = Math.abs(stats.score - stats.aiScore);
+      document.getElementById('resVsYou').textContent = stats.score;
+      document.getElementById('resVsAi').textContent = stats.aiScore;
+
+      var gapEl = document.getElementById('resVsGap');
+      if (vsWinner === 'draw') {
+        gapEl.textContent = '双方打成平局';
+      } else if (vsWinner === 'player') {
+        gapEl.textContent = '你领先 AI ' + gap + ' 分';
+      } else {
+        gapEl.textContent = 'AI 领先你 ' + gap + ' 分';
+      }
+      gapEl.className = 'vs-score-gap ' +
+        (vsWinner === 'player' ? 'is-win' : (vsWinner === 'ai' ? 'is-lose' : 'is-mid'));
     }
 
     // 本局积分：直接在第一页动态展示变化与段位进度（错词复习不参与）
@@ -1055,14 +1079,14 @@
       });
     }
 
-    // 破纪录标记：冲刺已用大字结论展示，其余模式只在真破纪录时补一个徽章
+    // 新纪录徽章：只有真正刷新最高分才显示，不刷新就不提示，也不出现「未破纪录」
+    // 失败局不挂徽章，避免「新纪录」和「失败」同时出现
     var recBadge = document.getElementById('resNew');
-    var missBadge = document.getElementById('resMiss');
-    recBadge.hidden = !(isNewRecord && !isReview && mode !== 'sprint');
-    missBadge.hidden = true;
+    var recOk = mode === 'sprint' || (mode === 'versus' && vsWinner === 'player');
+    recBadge.hidden = !(isNewRecord && !isReview && recOk);
     document.getElementById('resRecordRow').hidden = recBadge.hidden;
 
-    // 打错的单词：去重后最多 10 个
+    // 本局需要加强的单词：去重后最多 10 个
     var wrap = document.getElementById('resWrong');
     wrap.innerHTML = '';
     var seen = {};
@@ -1083,9 +1107,10 @@
     if (shown === 0) {
       var none = document.createElement('span');
       none.className = 'wrong-none';
-      none.textContent = '本局没有打错的单词，漂亮';
+      none.textContent = '本局没有打错的单词，继续保持！';
       wrap.appendChild(none);
     }
+    document.getElementById('resWrongHint').hidden = shown === 0;
 
     UI.showScreen('RESULT');
   }

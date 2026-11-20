@@ -225,10 +225,13 @@
       <!-- 第一步：本局表现 -->
       <div class="result-step is-active" id="resStep1">
         <div class="res-record-row" id="resRecordRow">
-          <span class="record-badge" id="resNew" hidden>破纪录</span>
-          <span class="record-badge plain" id="resMiss" hidden>未破纪录</span>
+          <span class="record-badge" id="resNew" hidden>新纪录</span>
         </div>
         <div class="result-verdict" id="resVerdict">失败</div>
+        <div class="result-vs-score" id="resVsScore" hidden>
+          <div class="vs-score-nums"><b id="resVsYou">0</b><i>:</i><b id="resVsAi">0</b></div>
+          <div class="vs-score-gap" id="resVsGap">双方打成平局</div>
+        </div>
         <div class="result-status" id="resStatus">第 1 / 6 关</div>
         <div class="result-grid" id="resGrid">
           <div class="res-item" id="resItem1"><span id="resCap1">本局得分</span><b id="resScore">0</b></div>
@@ -236,6 +239,7 @@
           <div class="res-item" id="resItem3"><span id="resCap3">本局打字速度</span><b id="resWpm">0</b></div>
           <div class="res-item" id="resItem4"><span id="resCap4">本局最高连击</span><b id="resCombo">0</b></div>
         </div>
+        <div class="res-best" id="resBest" hidden>历史最佳 <b id="resBestScore">0</b> 分 · 最佳打字速度 <b id="resBestWpm">0</b> 词/分</div>
         <div class="vs-table" id="resVsTable" hidden>
           <div class="vs-row vs-head"><span>本局数据</span><b>你</b><b>AI</b></div>
           <div class="vs-row"><span>得分</span><b id="vsYouScore">0</b><b id="vsAiScore">0</b></div>
@@ -243,8 +247,9 @@
           <div class="vs-row"><span>剩余爱心</span><b id="vsYouLives">3</b><b id="vsAiLives">3</b></div>
         </div>
         <div class="wrong-block">
-          <div class="wrong-title">本局打错的单词</div>
+          <div class="wrong-title">本局需要加强的单词</div>
           <div class="wrong-list" id="resWrong"></div>
+          <div class="wrong-hint" id="resWrongHint">这些单词在本局中出现过输入错误，可以在错词本中继续练习。</div>
         </div>
         <div class="rank-line" id="resRankLine">
           <div class="rank-line-head">
