@@ -504,7 +504,6 @@
   function showClearDialog(isFinal) {
     var ui = global.UI;
     var level = G.levelIndex + 1;
-    var nextLv = isFinal ? null : G.levels[G.levelIndex + 1];
     var lv = G.levels[G.levelIndex];
     // 本关四项数据与结算页同一套：得分 / 准确率 / 打字速度 / 最高连击，统计范围统一为本关
     var usedMs = lv ? Math.max(0, (lv.timeLimit - Math.max(0, G.levelTime)) * 1000) : 0;
@@ -553,25 +552,36 @@
     });
     wrap.appendChild(scores);
 
-    // 关卡进度信息单独一行，不混进四张核心数据卡片
-    if (!isFinal && nextLv) {
-      var nextRow = document.createElement('div');
-      nextRow.className = 'congrats-next';
-      var nextCap = document.createElement('span');
-      nextCap.className = 'congrats-next-cap';
-      nextCap.textContent = '下一关挑战';
-      var nextLine = document.createElement('div');
-      nextLine.className = 'congrats-next-row';
-      var nextText = document.createElement('span');
-      nextText.textContent = '第' + numToCn(level + 1) + '关目标分数';
-      var nextVal = document.createElement('b');
-      nextVal.textContent = nextLv.target;
-      nextLine.appendChild(nextText);
-      nextLine.appendChild(nextVal);
-      nextRow.appendChild(nextCap);
-      nextRow.appendChild(nextLine);
-      wrap.appendChild(nextRow);
+    // 本局打错的单词：与结算页同一套展示（去重后最多 10 个）
+    var wrongBox = document.createElement('div');
+    wrongBox.className = 'congrats-wrong';
+    var wrongCap = document.createElement('span');
+    wrongCap.className = 'congrats-wrong-cap';
+    wrongCap.textContent = '本局打错的单词';
+    wrongBox.appendChild(wrongCap);
+
+    var wrongList = document.createElement('div');
+    wrongList.className = 'congrats-wrong-list';
+    var seen = {};
+    var shown = 0;
+    for (var j = 0; j < G.wrongWords.length && shown < 10; j++) {
+      var w = G.wrongWords[j];
+      if (seen[w]) continue;
+      seen[w] = true;
+      shown++;
+      var chip = document.createElement('span');
+      chip.className = 'wrong-chip';
+      chip.textContent = w;
+      wrongList.appendChild(chip);
     }
+    if (!shown) {
+      var none = document.createElement('span');
+      none.className = 'wrong-none';
+      none.textContent = '本局没有打错的单词，漂亮';
+      wrongList.appendChild(none);
+    }
+    wrongBox.appendChild(wrongList);
+    wrap.appendChild(wrongBox);
 
     // 本局加分进度条：与结算页同一套组件，数据与动画由入口层注入
     if (typeof Game.renderClearRank === 'function') {

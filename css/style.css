@@ -916,14 +916,13 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 .congrats-score span{display:block;font-size:10px;letter-spacing:.1em;color:var(--dim2)}
 .congrats-score b{font-size:18px;font-variant-numeric:tabular-nums;color:var(--acc)}
-/* 下一关进度信息：独立一行，不混进核心数据卡片 */
-.congrats-next{
+/* 本局打错的单词：独立一块，复用结算页的错词样式 */
+.congrats-wrong{
   margin-top:10px;padding:10px 12px;border-radius:12px;text-align:left;
   background:var(--panel2);border:1px dashed var(--line);
 }
-.congrats-next-cap{display:block;font-size:10px;letter-spacing:.1em;color:var(--dim2)}
-.congrats-next-row{display:flex;align-items:baseline;gap:10px;margin-top:3px;font-size:12.5px;color:var(--dim)}
-.congrats-next-row b{margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums;color:var(--acc)}
+.congrats-wrong-cap{display:block;font-size:10px;letter-spacing:.1em;color:var(--dim2)}
+.congrats-wrong-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 /* 弹窗里的本局积分进度条（复用结算页 rank-line） */
 .congrats-rank .rank-line{margin-top:16px;padding-top:12px;text-align:left}
 
