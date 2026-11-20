@@ -208,6 +208,16 @@
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  // 关卡序号转中文：1 → 一，23 → 二十三
+  function numToCn(n) {
+    var cn = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    var v = Math.max(0, parseInt(n, 10) || 0);
+    if (v < 10) return cn[v];
+    if (v < 20) return '十' + (v % 10 ? cn[v % 10] : '');
+    if (v < 100) return cn[Math.floor(v / 10)] + '十' + (v % 10 ? cn[v % 10] : '');
+    return String(v);
+  }
+
   /* ---------------- 首次进入引导 ----------------
      流程：WELCOME（昵称）→ GUIDE（7 步对话）→ HOME
      guideSeen 记录在 localStorage 的 typingBlock_guideSeen 中
@@ -698,50 +708,22 @@
     rankTimers = [];
   }
 
-  // 大字结论：只有「失败」用石头碎裂动效，其余用弹出动效
+  // 大字结论：失败时两个字先后从上方掉落，其余模式用弹出动效
   function renderVerdict(el, text, cls) {
     el.className = 'result-verdict ' + cls;
+    el.innerHTML = '';
     if (cls === 'is-lose' && text === '失败') {
-      el.classList.add('is-shatter');
-      buildShatter(el, text);
+      el.classList.add('is-drop');
+      for (var i = 0; i < text.length; i++) {
+        var ch = document.createElement('span');
+        ch.className = 'drop-char';
+        ch.textContent = text.charAt(i);
+        ch.style.setProperty('--i', i);
+        el.appendChild(ch);
+      }
     } else {
-      el.classList.remove('is-shatter');
       el.textContent = text;
     }
-  }
-
-  function buildShatter(el, text) {
-    el.innerHTML = '';
-    var wrap = document.createElement('div');
-    wrap.className = 'shatter-wrap';
-    // 左右两个字各裂成上下两块：先完整停留，再慢慢向两侧倾倒——「失」倒向左、「败」倒向右
-    var tiles = [
-      { clip: 'polygon(0 0, 50% 0, 47% 48%, 0 54%)', to: 'translate(-12px,0) rotate(-9deg)', origin: '25% 100%' },
-      { clip: 'polygon(0 54%, 47% 48%, 50% 100%, 0 100%)', to: 'translate(-16px,1px) rotate(-6deg)', origin: '25% 100%' },
-      { clip: 'polygon(53% 0, 100% 0, 100% 54%, 53% 48%)', to: 'translate(12px,0) rotate(9deg)', origin: '75% 100%' },
-      { clip: 'polygon(53% 48%, 100% 54%, 100% 100%, 53% 100%)', to: 'translate(16px,1px) rotate(6deg)', origin: '75% 100%' }
-    ];
-    for (var i = 0; i < tiles.length; i++) {
-      var s = document.createElement('span');
-      s.className = 'shard';
-      s.textContent = text;
-      s.style.webkitClipPath = tiles[i].clip;
-      s.style.clipPath = tiles[i].clip;
-      s.style.setProperty('--to', tiles[i].to);
-      s.style.setProperty('--origin', tiles[i].origin);
-      s.style.setProperty('--delay', (i * 0.07) + 's');
-      wrap.appendChild(s);
-    }
-    for (var j = 0; j < 10; j++) {
-      var d = document.createElement('i');
-      d.className = 'debris';
-      d.style.setProperty('--dx', (Math.random() * 180 - 90) + 'px');
-      d.style.setProperty('--dy', (Math.random() * 130 - 30) + 'px');
-      d.style.setProperty('--dr', (Math.random() * 420 - 210) + 'deg');
-      d.style.setProperty('--delay', (1.05 + Math.random() * 0.3) + 's');
-      wrap.appendChild(d);
-    }
-    el.appendChild(wrap);
   }
 
   // 把第二步重置到“只显示原有积分”的初始状态
@@ -952,7 +934,7 @@
       } else if (stats.failReason === 'time') {
         status.textContent = lvText + ' · 时间到，本局结束';
       } else {
-        status.textContent = lvText + ' · 爱心碎完，本局结束';
+        status.textContent = '第' + numToCn(stats.levelIndex) + '关';
       }
       winView = !!stats.win || (stats.failReason === 'quit' && stats.cleared > 0);
     }
@@ -978,6 +960,15 @@
       else { bigText = '失败'; bigCls = 'is-lose'; }
     }
     renderVerdict(verdict, bigText, bigCls);
+
+    // 单机因爱心碎完失败时，把「第一关」移到「失败」上方并居中；其它情况放回大字下方
+    if (mode === 'solo' && !stats.win && stats.failReason !== 'quit' && stats.failReason !== 'time') {
+      verdict.parentNode.insertBefore(status, verdict);
+      status.classList.add('is-above');
+    } else {
+      verdict.parentNode.insertBefore(status, verdict.nextSibling);
+      status.classList.remove('is-above');
+    }
 
     // 第二步：段位积分变化与进度条（错词复习不参与）
     var summaryEl = document.getElementById('resRankSummary');

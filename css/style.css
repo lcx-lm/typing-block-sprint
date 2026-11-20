@@ -370,35 +370,23 @@ body[data-state="RESULT"] .user-strip{display:none}
 .result-verdict.is-win{color:var(--acc);animation:verdictPop .5s cubic-bezier(.2,.8,.3,1.2) both}
 .result-verdict.is-mid{color:var(--gold);animation:verdictPop .5s cubic-bezier(.2,.8,.3,1.2) both}
 .result-verdict.is-lose{color:var(--danger)}
-.result-verdict.is-shatter{height:1.1em}
+.result-status.is-above{margin-top:0;margin-bottom:2px;text-align:center;font-weight:700;letter-spacing:.14em;color:var(--dim2)}
 @keyframes verdictPop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 
-/* 失败结论：先完整停留，再慢慢向两侧裂开倾倒（左字倒左、右字倒右） */
-.shatter-wrap{position:relative;width:100%;height:100%}
-.shard{
-  position:absolute;inset:0;display:block;text-align:center;
-  font-size:inherit;font-weight:900;letter-spacing:.16em;line-height:1.1;
-  background:linear-gradient(135deg,#4a181c 0%,#a8454f 28%,#7a2e35 52%,#c25a64 74%,#3a1216 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  -webkit-text-stroke:1px rgba(0,0,0,.28);
-  filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));
-  opacity:1;transform:none;transform-origin:var(--origin,50% 100%);
-  animation:shardFly 1.3s cubic-bezier(.5,.05,.7,.2) forwards;
-  animation-delay:calc(.95s + var(--delay,0s));
+/* 失败结论：先停一会，再让「失」「败」先后从上方掉落到位 */
+.result-verdict.is-drop{display:flex;justify-content:center;letter-spacing:0}
+.drop-char{
+  display:inline-block;
+  animation:verdictDrop .62s cubic-bezier(.34,.03,.5,1.4) both;
+  animation-delay:calc(.6s + var(--i,0)*.14s);
 }
-@keyframes shardFly{
-  0%{transform:none;opacity:1}
-  100%{transform:var(--to);opacity:1}
-}
-.debris{
-  position:absolute;left:50%;top:48%;width:7px;height:7px;border-radius:1px;
-  background:#7a2e35;opacity:0;
-  animation:debrisFly 1.1s ease-in forwards;
-  animation-delay:var(--delay);
-}
-@keyframes debrisFly{
-  0%{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:1}
-  100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--dr)) scale(.2);opacity:0}
+.drop-char + .drop-char{margin-left:.16em}
+@keyframes verdictDrop{
+  0%{transform:translateY(-180px);opacity:0}
+  40%{opacity:1}
+  70%{transform:translateY(7px)}
+  86%{transform:translateY(-3px)}
+  100%{transform:translateY(0)}
 }
 
 /* 段位结算第二步 */
