@@ -726,8 +726,10 @@
   }
 
   // 本局积分：先显示原有进度，再动态涨（或退）到结算后的进度
+  // 节奏：等大字结论落定 → 弹出加减分 → 进度条从结算前位置走 / 退 → 揭示段位与文案
   function playRankInline(a) {
     clearRankTimers();
+    var t0 = a.delay || 0;
     var deltaEl = document.getElementById('resRankDelta');
     var totalEl = document.getElementById('resRankAfter');
     var rankName = document.getElementById('resRankName');
@@ -753,18 +755,21 @@
     void fill.offsetWidth;
     fill.style.transition = '';
 
+    // 1) 大字结论落定后，先弹出本局加减分
     rankTimers.push(setTimeout(function () {
       deltaEl.classList.add('is-reveal');
-    }, 500));
+    }, t0));
+    // 2) 稍作停顿，进度条从结算前位置开始前进 / 后退，数字同步滚动
     rankTimers.push(setTimeout(function () {
       fill.style.width = pctAfter + '%';
-      tweenLabel(label, a.before, a.after, a.denom, 900);
-      tweenLabel(totalEl, a.before, a.after, null, 900);
-    }, 800));
+      tweenLabel(label, a.before, a.after, a.denom, 1200);
+      tweenLabel(totalEl, a.before, a.after, null, 1200);
+    }, t0 + 700));
+    // 3) 进度条走完后再揭示段位名与下一段位提示
     rankTimers.push(setTimeout(function () {
       rankName.classList.add('is-reveal');
       note.classList.add('is-reveal');
-    }, 1800));
+    }, t0 + 700 + 1300));
   }
 
   function tweenLabel(el, from, to, denom, dur) {
@@ -968,6 +973,8 @@
       if (afterRank.next) {
         progText = '距' + afterRank.next.name + '还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
       }
+      // 「失败」掉落版要等两个字都落地后再开始积分动画，其余结论用短等待
+      var rankDelay = verdict.classList.contains('is-drop') ? 1900 : 900;
       playRankInline({
         before: beforePoints,
         after: DATA.rankPoints,
@@ -975,7 +982,8 @@
         denom: denom,
         curMin: afterRank.min,
         rankName: afterRank.name,
-        progText: progText
+        progText: progText,
+        delay: rankDelay
       });
     }
 
