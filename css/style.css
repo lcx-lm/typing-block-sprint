@@ -389,29 +389,43 @@ body[data-state="RESULT"] .user-strip{display:none}
   100%{transform:translateY(0)}
 }
 
-/* 段位结算第二步 */
-.rank-bar-row{display:flex;align-items:center;gap:12px;margin-top:14px}
-.rank-bar-row .rank-bar{flex:1;margin-top:0}
-.rank-bar-label{font-size:13px;font-weight:800;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:54px;text-align:right}
-.rs-reveal{animation:rsReveal .4s ease both}
+/* 本局积分：金色发光进度条，先显示原有进度再动态涨到结算后进度 */
+.rank-line{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.rank-line-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rank-line-cap{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--dim2)}
+.rank-line-delta{font-size:30px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--gold);text-shadow:0 0 18px rgba(251,191,36,.45);opacity:0}
+.rank-line-delta.up{color:var(--gold)}
+.rank-line-delta.down{color:var(--danger);text-shadow:0 0 18px rgba(251,113,133,.4)}
+.rank-line-delta.is-reveal{animation:rankDeltaPop .45s cubic-bezier(.2,.8,.3,1.3) both}
+@keyframes rankDeltaPop{0%{transform:translateY(10px) scale(.82);opacity:0}100%{transform:none;opacity:1}}
+.rank-line-caret{font-size:18px;font-weight:900;color:var(--gold);opacity:.65}
+.rank-line-pts{margin-left:auto;display:inline-flex;align-items:baseline;gap:7px;font-size:12px;color:var(--dim)}
+.rank-line-pts b{font-size:16px;font-weight:900;color:var(--tx);font-variant-numeric:tabular-nums}
+.rank-line-rank{font-style:normal;font-size:12px;font-weight:800;color:var(--gold);letter-spacing:.08em;opacity:0}
+.rank-line-rank.is-reveal{animation:rsReveal .4s ease both}
+.rank-glow-bar{position:relative;height:9px;border-radius:999px;margin-top:12px;background:rgba(251,191,36,.13);overflow:hidden}
+.rank-glow-fill{
+  display:block;height:100%;width:0;border-radius:999px;
+  background:linear-gradient(90deg,#f59e0b,#fde047 45%,#fbbf24 100%);
+  box-shadow:0 0 10px rgba(251,191,36,.8),0 0 24px rgba(251,191,36,.45);
+  transition:width .9s cubic-bezier(.22,.61,.36,1);
+}
+.rank-glow-bar::after{
+  content:"";position:absolute;inset:0;border-radius:999px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-100%);
+  animation:rankShine 2.6s ease-in-out infinite;
+}
+@keyframes rankShine{0%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
+.rank-line-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.rank-line-note{font-size:12px;color:var(--dim2);opacity:0}
+.rank-line-note.is-reveal{animation:rsReveal .4s ease both}
+.rank-line-label{font-size:12px;font-weight:800;color:var(--dim);font-variant-numeric:tabular-nums}
 @keyframes rsReveal{0%{transform:translateY(8px);opacity:0}100%{transform:none;opacity:1}}
-.rank-none{margin-top:30px;text-align:center;font-size:14px;color:var(--dim2);padding:18px;background:var(--panel2);border:1px solid var(--line);border-radius:12px}
-.rank-summary{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:24px}
-.rs-col{display:flex;flex-direction:column;align-items:center;gap:4px}
-.rs-cap{font-size:11px;letter-spacing:.1em;color:var(--dim2)}
-.rs-val{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--text)}
-.rs-val-wrap{display:inline-flex;align-items:baseline;gap:6px}
-.rs-rank{font-style:normal;font-size:13px;font-weight:800;color:var(--gold);letter-spacing:.06em}
-.rs-op{font-size:32px;font-weight:900;letter-spacing:-.02em;padding-top:16px}
-.rs-op.up{color:var(--acc)}
-.rs-op.down{color:var(--danger)}
-.rs-op.flat{color:var(--dim2)}
-.rank-progress{margin-top:24px}
-.rank-progress-text{font-size:12px;color:var(--dim2);margin-bottom:8px;text-align:center}
+.rank-none{margin-top:22px;text-align:center;font-size:14px;color:var(--dim2);padding:18px;background:var(--panel2);border:1px solid var(--line);border-radius:12px}
 @media (max-width:560px){
   .result-verdict{font-size:42px;letter-spacing:.1em}
-  .rs-val{font-size:24px}
-  .rs-op{font-size:26px}
+  .rank-line-delta{font-size:24px}
 }
 
 /* ---------------- 红闪 / Toast / 弹窗 ---------------- */

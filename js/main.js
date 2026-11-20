@@ -700,7 +700,6 @@
   }
 
   /* ---------------- 结算页辅助：大字动效与段位结算动画 ---------------- */
-  var rankAnim = null;
   var rankTimers = [];
 
   function clearRankTimers() {
@@ -726,36 +725,46 @@
     }
   }
 
-  // 把第二步重置到“只显示原有积分”的初始状态
-  function resetRankStep2(a) {
+  // 本局积分：先显示原有进度，再动态涨（或退）到结算后的进度
+  function playRankInline(a) {
     clearRankTimers();
-    var beforeEl = document.getElementById('resRankBefore');
     var deltaEl = document.getElementById('resRankDelta');
-    var afterCol = document.querySelector('.rs-after-col');
+    var totalEl = document.getElementById('resRankAfter');
     var rankName = document.getElementById('resRankName');
-    var progText = document.getElementById('resRankProgressText');
     var fill = document.getElementById('resRankFill');
     var label = document.getElementById('resRankBarLabel');
+    var note = document.getElementById('resRankProgressText');
 
-    beforeEl.textContent = a.before;
+    deltaEl.className = 'rank-line-delta' + (a.delta > 0 ? ' up' : (a.delta < 0 ? ' down' : ''));
     deltaEl.textContent = (a.delta > 0 ? '+' : '') + a.delta;
-    deltaEl.className = 'rs-op ' + (a.delta > 0 ? 'up' : (a.delta < 0 ? 'down' : 'flat'));
-    deltaEl.hidden = true;
-    document.getElementById('resRankAfter').textContent = a.after;
-    afterCol.hidden = true;
+    totalEl.textContent = a.before;
     rankName.textContent = a.rankName;
-    rankName.hidden = true;
-    progText.textContent = a.progText;
-    progText.hidden = true;
+    rankName.classList.remove('is-reveal');
+    note.textContent = a.progText;
+    note.classList.remove('is-reveal');
+    label.textContent = a.denom ? (a.before + '/' + a.denom) : String(a.before);
 
     var rspan = a.denom ? (a.denom - a.curMin) : 1;
     var pctBefore = a.denom ? Math.max(0, Math.min(100, ((a.before - a.curMin) / rspan) * 100)) : 100;
+    var pctAfter = a.denom ? Math.max(0, Math.min(100, ((a.after - a.curMin) / rspan) * 100)) : 100;
     fill.style.transition = 'none';
     fill.style.width = pctBefore + '%';
-    label.textContent = a.denom ? (a.before + '/' + a.denom) : String(a.before);
     // 触发重排，保证后续 width 变化能触发过渡
     void fill.offsetWidth;
     fill.style.transition = '';
+
+    rankTimers.push(setTimeout(function () {
+      deltaEl.classList.add('is-reveal');
+    }, 500));
+    rankTimers.push(setTimeout(function () {
+      fill.style.width = pctAfter + '%';
+      tweenLabel(label, a.before, a.after, a.denom, 900);
+      tweenLabel(totalEl, a.before, a.after, null, 900);
+    }, 800));
+    rankTimers.push(setTimeout(function () {
+      rankName.classList.add('is-reveal');
+      note.classList.add('is-reveal');
+    }, 1800));
   }
 
   function tweenLabel(el, from, to, denom, dur) {
@@ -778,40 +787,6 @@
     global.requestAnimationFrame(step);
     // 兜底：rAF 在后台标签页会被节流，用定时器保证最终值一定到位
     setTimeout(finish, dur + 100);
-  }
-
-  // 点“下一步”后依次揭示：扣分项 → 当前总分 → 进度条回退 → 段位名
-  function playRankSettle() {
-    if (!rankAnim) return;
-    var a = rankAnim;
-    var deltaEl = document.getElementById('resRankDelta');
-    var afterCol = document.querySelector('.rs-after-col');
-    var rankName = document.getElementById('resRankName');
-    var progText = document.getElementById('resRankProgressText');
-    var fill = document.getElementById('resRankFill');
-    var label = document.getElementById('resRankBarLabel');
-
-    clearRankTimers();
-    rankTimers.push(setTimeout(function () {
-      deltaEl.hidden = false;
-      deltaEl.classList.add('rs-reveal');
-    }, 450));
-    rankTimers.push(setTimeout(function () {
-      afterCol.hidden = false;
-      afterCol.classList.add('rs-reveal');
-    }, 950));
-    rankTimers.push(setTimeout(function () {
-      var rspan = a.denom ? (a.denom - a.curMin) : 1;
-      var pctAfter = a.denom ? Math.max(0, Math.min(100, ((a.after - a.curMin) / rspan) * 100)) : 100;
-      fill.style.width = pctAfter + '%';
-      tweenLabel(label, a.before, a.after, a.denom, 650);
-    }, 1300));
-    rankTimers.push(setTimeout(function () {
-      rankName.hidden = false;
-      rankName.classList.add('rs-reveal');
-      progText.hidden = false;
-      progText.classList.add('rs-reveal');
-    }, 2050));
   }
 
   /* ---------------- 结算 ---------------- */
@@ -978,27 +953,22 @@
       status.classList.remove('is-above');
     }
 
-    // 第二步：段位积分变化与进度条（错词复习不参与）
-    var summaryEl = document.getElementById('resRankSummary');
-    var progEl = document.getElementById('resRankProgress');
+    // 本局积分：直接在第一页动态展示变化与段位进度（错词复习不参与）
+    var rankLine = document.getElementById('resRankLine');
     var reviewNote = document.getElementById('resReviewNote');
-    clearRankTimers();
     if (isReview) {
-      rankAnim = null;
-      summaryEl.hidden = true;
-      progEl.hidden = true;
+      rankLine.hidden = true;
       reviewNote.hidden = false;
     } else {
-      summaryEl.hidden = false;
-      progEl.hidden = false;
+      rankLine.hidden = false;
       reviewNote.hidden = true;
 
       var denom = afterRank.next ? afterRank.next.min : null;
       var progText = '已达到最高段位';
       if (afterRank.next) {
-        progText = '距 ' + afterRank.next.name + ' 还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
+        progText = '距' + afterRank.next.name + '还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
       }
-      rankAnim = {
+      playRankInline({
         before: beforePoints,
         after: DATA.rankPoints,
         delta: outcome.delta,
@@ -1006,8 +976,7 @@
         curMin: afterRank.min,
         rankName: afterRank.name,
         progText: progText
-      };
-      resetRankStep2(rankAnim);
+      });
     }
 
     // 破纪录标记：冲刺已用大字结论展示，其余模式只在真破纪录时补一个徽章
@@ -1041,10 +1010,6 @@
       none.textContent = '本局没有打错的单词，漂亮';
       wrap.appendChild(none);
     }
-
-    // 每次结算都先回到第一步
-    document.getElementById('resStep1').classList.add('is-active');
-    document.getElementById('resStep2').classList.remove('is-active');
 
     UI.showScreen('RESULT');
   }
@@ -1405,11 +1370,6 @@
       UI.confirm('退出本局', lines.join('<br>'), function () {
         Game.quit();
       });
-    });
-    document.getElementById('resNextBtn').addEventListener('click', function () {
-      document.getElementById('resStep1').classList.remove('is-active');
-      document.getElementById('resStep2').classList.add('is-active');
-      playRankSettle();
     });
 
     // 结算页

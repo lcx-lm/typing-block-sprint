@@ -246,35 +246,20 @@
           <div class="wrong-title">本局打错的单词</div>
           <div class="wrong-list" id="resWrong"></div>
         </div>
-        <div class="result-actions is-center">
-          <button class="btn primary" id="resNextBtn">下一步</button>
-        </div>
-      </div>
-
-      <!-- 第二步：段位结算 -->
-      <div class="result-step" id="resStep2">
-        <div class="result-head">
-          <div class="section-title">段位结算</div>
+        <div class="rank-line" id="resRankLine">
+          <div class="rank-line-head">
+            <span class="rank-line-cap">本局总计积分</span>
+            <b class="rank-line-delta" id="resRankDelta">+0</b>
+            <span class="rank-line-caret">›</span>
+            <span class="rank-line-pts"><b id="resRankAfter">0</b><i class="rank-line-rank" id="resRankName">青铜</i></span>
+          </div>
+          <div class="rank-glow-bar"><i class="rank-glow-fill" id="resRankFill"></i></div>
+          <div class="rank-line-foot">
+            <span class="rank-line-note" id="resRankProgressText">距下一段位还差 0 分</span>
+            <span class="rank-line-label" id="resRankBarLabel">0/100</span>
+          </div>
         </div>
         <div class="rank-none" id="resReviewNote" hidden>错词复习不计段位积分</div>
-        <div class="rank-summary" id="resRankSummary">
-          <div class="rs-col rs-before-col">
-            <span class="rs-cap">原有积分</span>
-            <b class="rs-val" id="resRankBefore">0</b>
-          </div>
-          <div class="rs-op" id="resRankDelta" hidden>-10</div>
-          <div class="rs-col rs-after-col" hidden>
-            <span class="rs-cap">当前总积分</span>
-            <span class="rs-val-wrap"><b class="rs-val" id="resRankAfter">0</b><i class="rs-rank" id="resRankName" hidden>青铜</i></span>
-          </div>
-        </div>
-        <div class="rank-progress" id="resRankProgress">
-          <div class="rank-bar-row">
-            <div class="rank-bar"><i class="rank-fill" id="resRankFill"></i></div>
-            <span class="rank-bar-label" id="resRankBarLabel">0/100</span>
-          </div>
-          <div class="rank-progress-text" id="resRankProgressText" hidden>距下一段位还差 0 分</div>
-        </div>
         <div class="result-actions is-center">
           <button class="btn primary" id="againBtn">再来一局</button>
           <button class="btn ghost" id="changeSetBtn">换词库</button>
