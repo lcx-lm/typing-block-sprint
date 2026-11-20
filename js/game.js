@@ -91,6 +91,10 @@
     input: '',
     spawnAcc: 0,
     blocks: [],
+    bag: [],
+    bagPool: null,
+    bagMaxLen: 0,
+    bagLastWord: '',
     wrongWords: [],
     reviewPool: [],
     composing: false,
@@ -264,6 +268,56 @@
     return Math.min(3, 6 / n);
   }
 
+  /* ---------------- 洗牌袋 ----------------
+     出块不再每次整池随机，而是先把当前词池按难度长度过滤、打乱，
+     再按顺序逐个取出；一轮抽完后重新洗牌。
+     这样在抽完一整轮之前不会重复遇到同一个词，同时顺序仍是随机的。
+     玩家与 AI 共用同一个袋子，两条跑道也不会刷出同一个词。
+     ------------------------------------------------ */
+  function shuffleInPlace(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function refillBag(pool, maxLen) {
+    var items = pool.filter(function (w) { return w.word.length <= maxLen; });
+    if (!items.length) items = pool.slice();
+    shuffleInPlace(items);
+    // 新一轮的第一个词避开上一轮的最后一个词，避免「刚打完又冒出来」
+    if (items.length > 1 && items[0].word === G.bagLastWord) {
+      var k = 1 + Math.floor(Math.random() * (items.length - 1));
+      var tmp = items[0]; items[0] = items[k]; items[k] = tmp;
+    }
+    G.bag = items;
+  }
+
+  function ensureBag(pool, maxLen) {
+    if (G.bagPool !== pool || G.bagMaxLen !== maxLen) {
+      G.bagPool = pool;
+      G.bagMaxLen = maxLen;
+    }
+    if (!G.bag.length) refillBag(pool, maxLen);
+  }
+
+  function takeFromBag(pool, maxLen, onScreen) {
+    ensureBag(pool, maxLen);
+    for (var round = 0; round < 3; round++) {
+      for (var i = 0; i < G.bag.length; i++) {
+        if (onScreen.indexOf(G.bag[i].word) === -1) {
+          var item = G.bag.splice(i, 1)[0];
+          G.bagLastWord = item.word;
+          return item;
+        }
+      }
+      // 本轮剩下的词都已在屏上：换一轮新牌继续找（大词池基本走不到这里）
+      refillBag(pool, maxLen);
+    }
+    return null;
+  }
+
   function spawnBlock(owner) {
     owner = owner === 'ai' ? 'ai' : 'player';
 
@@ -288,14 +342,20 @@
       if (review.length && Math.random() < 0.35) avail = review;
     }
 
-    if (!avail) {
-      avail = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
-      // 词池里的词都已在屏上时，这一轮不出块。
-      // 避免错词复习只有 1~3 个词时同屏出现两个相同单词。
-      if (!avail.length) return;
+    var item = null;
+    if (avail) {
+      item = avail[Math.floor(Math.random() * avail.length)];
+    } else if (G.mode === 'review') {
+      // 复习词池很小，保留随机取词与同屏去重；词全在屏上时本轮不出块
+      var left = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
+      if (!left.length) return;
+      item = left[Math.floor(Math.random() * left.length)];
+    } else {
+      // 洗牌袋抽词：抽完一整轮之前不会重复，抽完自动重新洗牌
+      item = takeFromBag(pool, maxLen, onScreen);
+      if (!item) return;
     }
 
-    var item = avail[Math.floor(Math.random() * avail.length)];
     var host = laneElFor(owner);
 
     var el = createBlockEl(item.word, item.meaning);
@@ -1093,6 +1153,10 @@
     G.elapsedMs = 0;
     G.input = '';
     G.spawnAcc = 0;
+    G.bag = [];
+    G.bagPool = null;
+    G.bagMaxLen = 0;
+    G.bagLastWord = '';
     G.wrongWords = [];
     G.reviewPool = Array.isArray(reviewWords) ? reviewWords.slice() : [];
     G.composing = false;
