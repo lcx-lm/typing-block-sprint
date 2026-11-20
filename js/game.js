@@ -16,14 +16,14 @@
      ------------------------------------------------ */
   var DIFFS = {
     easy:   { name: '简单', spawnInterval: 2200, fallSpeed: 30, maxLen: 5,  coef: 0.8,
-              aiSpawnInterval: 6200, aiCps: 1.8, aiReact: [1.5, 2.0], aiError: 0.22,
-              aiSkip: 0.20, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
+              aiSpawnInterval: 5200, aiCps: 2.3, aiReact: [1.2, 1.7], aiError: 0.18,
+              aiSkip: 0.16, desc: '2200ms / 30px·s⁻¹ · 单词≤5' },
     normal: { name: '普通', spawnInterval: 1600, fallSpeed: 45, maxLen: 8,  coef: 1.0,
-              aiSpawnInterval: 5500, aiCps: 2.6, aiReact: [1.0, 1.5], aiError: 0.18,
-              aiSkip: 0.12, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
+              aiSpawnInterval: 3800, aiCps: 3.4, aiReact: [0.7, 1.1], aiError: 0.12,
+              aiSkip: 0.08, desc: '1600ms / 45px·s⁻¹ · 单词≤8' },
     hard:   { name: '困难', spawnInterval: 1100, fallSpeed: 65, maxLen: 12, coef: 1.3,
-              aiSpawnInterval: 4500, aiCps: 3.6, aiReact: [0.6, 1.0], aiError: 0.10,
-              aiSkip: 0.06, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
+              aiSpawnInterval: 3600, aiCps: 4.0, aiReact: [0.5, 0.9], aiError: 0.08,
+              aiSkip: 0.05, desc: '1100ms / 65px·s⁻¹ · 单词≤12' }
   };
 
   // 双跑道每条只有半屏宽，限制最长词，避免长词挤出跑道
@@ -31,7 +31,7 @@
   // 对战里玩家跑道出块放缓，避免被持续下落的方块压死而忽略比分对抗
   var VERSE_PLAYER_SPAWN_SCALE = 1.6;
   // AI 连击加成上限，避免机器一路滚雪球
-  var AI_COMBO_CAP = 6;
+  var AI_COMBO_CAP = 8;
   // 拔河条：70% 压制、保持 3 秒、15 秒后且总分 400 才启用
   var VERSE_KO_SHARE = 0.70;
   var VERSE_KO_RELEASE = 0.65;   // 回落到 65% 以下才解除压制读秒
