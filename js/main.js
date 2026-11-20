@@ -707,22 +707,20 @@
     rankTimers = [];
   }
 
-  // 大字结论：失败时两个字先后从上方掉落，其余模式用弹出动效
+  // 大字结论：所有结论（失败 / 通关 / 胜利 / 破纪录等）都逐字从上方掉落，
+  // 返回值是整段掉字动效的总时长（毫秒），供积分动画排队使用
   function renderVerdict(el, text, cls) {
-    el.className = 'result-verdict ' + cls;
+    el.className = 'result-verdict ' + cls + ' is-drop';
     el.innerHTML = '';
-    if (cls === 'is-lose' && text === '失败') {
-      el.classList.add('is-drop');
-      for (var i = 0; i < text.length; i++) {
-        var ch = document.createElement('span');
-        ch.className = 'drop-char';
-        ch.textContent = text.charAt(i);
-        ch.style.setProperty('--i', i);
-        el.appendChild(ch);
-      }
-    } else {
-      el.textContent = text;
+    for (var i = 0; i < text.length; i++) {
+      var ch = document.createElement('span');
+      ch.className = 'drop-char';
+      ch.textContent = text.charAt(i);
+      ch.style.setProperty('--i', i);
+      el.appendChild(ch);
     }
+    // 与 CSS 保持一致：0.6s 起始停顿 + 每字 0.16s 间隔 + 0.72s 掉落动画
+    return 600 + Math.max(0, text.length - 1) * 160 + 720;
   }
 
   // 本局积分：先显示原有进度，再动态涨（或退）到结算后的进度
@@ -947,7 +945,7 @@
       else if (stats.failReason === 'time') { bigText = '时间到'; bigCls = winView ? 'is-win' : 'is-lose'; }
       else { bigText = '失败'; bigCls = 'is-lose'; }
     }
-    renderVerdict(verdict, bigText, bigCls);
+    var dropMs = renderVerdict(verdict, bigText, bigCls);
 
     // 单机因爱心碎完失败时，把「第一关」移到「失败」上方并居中；其它情况放回大字下方
     if (mode === 'solo' && !stats.win && stats.failReason !== 'quit' && stats.failReason !== 'time') {
@@ -973,8 +971,8 @@
       if (afterRank.next) {
         progText = '距' + afterRank.next.name + '还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
       }
-      // 「失败」掉落版要等两个字都落地后再开始积分动画，其余结论用短等待
-      var rankDelay = verdict.classList.contains('is-drop') ? 1900 : 900;
+      // 等大字掉完再开始积分动画：先弹出加减分，再走进度条
+      var rankDelay = dropMs + 500;
       playRankInline({
         before: beforePoints,
         after: DATA.rankPoints,

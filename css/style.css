@@ -373,8 +373,8 @@ body[data-state="RESULT"] .user-strip{display:none}
 .result-status.is-above{margin-top:0;margin-bottom:2px;text-align:center;font-weight:700;letter-spacing:.14em;color:var(--dim2)}
 @keyframes verdictPop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
 
-/* 失败结论：先停一会，再让「失」「败」先后从上方掉落到位 */
-.result-verdict.is-drop{display:flex;justify-content:center;letter-spacing:0}
+/* 大字结论：所有胜负文案都逐字从上方掉落到位（容器不再整体弹出） */
+.result-verdict.is-drop{display:flex;justify-content:center;letter-spacing:0;animation:none}
 .drop-char{
   display:inline-block;
   animation:verdictDrop .72s cubic-bezier(.34,.03,.5,1.4) both;
