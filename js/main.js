@@ -643,6 +643,11 @@
 
   /* ---------------- 排位积分 ---------------- */
   function calcRankOutcome(stats, mode) {
+    // 开局后一个单词都没消除就退出：不扣分，也不计胜负
+    if (stats.failReason === 'quit' && !stats.wordsCleared) {
+      return { delta: 0, result: 'none', bonus: 0 };
+    }
+
     if (mode === 'sprint') {
       if (stats.score >= 600) return { delta: 15, result: 'win' };
       if (stats.score >= 400) return { delta: 5, result: 'win' };
@@ -860,7 +865,10 @@
     var isReview = mode === 'review';
     var beforePoints = DATA.rankPoints;
     var outcome = isReview ? { delta: 0, result: 'none', bonus: 0 } : calcRankOutcome(stats, mode);
-    var afterRank = isReview ? rankOf(DATA.rankPoints) : applyRankResult(outcome.delta, outcome.result);
+    // result 为 none（错词复习、未消除任何单词就退出）时不写入段位战绩
+    var afterRank = outcome.result === 'none'
+      ? rankOf(DATA.rankPoints)
+      : applyRankResult(outcome.delta, outcome.result);
 
     var isNewRecord = !isReview && stats.score > DATA.bestScore;
 
@@ -1377,7 +1385,40 @@
       Game.resume();
     });
     document.getElementById('quitGameBtn').addEventListener('click', function () {
-      Game.quit();
+      var info = Game.getQuitInfo();
+      // 开局后一个单词都还没消除：直接退出，不扣积分
+      if (!info.wordsCleared) {
+        Game.quit();
+        return;
+      }
+      // 已有消除记录：先说明当前进度与退出代价，确认后再退出
+      var preview = calcRankOutcome({
+        score: info.score,
+        cleared: info.cleared,
+        startLevel: info.startLevel,
+        win: false,
+        versusWinner: info.versusWinner,
+        aiScore: info.aiScore,
+        wordsCleared: info.wordsCleared,
+        failReason: 'quit'
+      }, info.mode);
+      var lines = ['目前已消除 <b>' + info.score + '</b> 分。'];
+      if (info.mode === 'solo') {
+        lines.push(info.remainingWords > 0
+          ? '再消除约 <b>' + info.remainingWords + '</b> 个单词即可通过本关。'
+          : '本关目标分已达成。');
+      }
+      if (preview.delta < 0) {
+        lines.push('现在退出将扣除 <b>' + (-preview.delta) + '</b> 积分。');
+      } else if (preview.delta > 0) {
+        lines.push('现在退出仍按已通过关卡结算，获得 <b>+' + preview.delta + '</b> 积分。');
+      } else {
+        lines.push('现在退出不扣积分。');
+      }
+      lines.push('确定退出本局吗？');
+      UI.confirm('退出本局', lines.join('<br>'), function () {
+        Game.quit();
+      });
     });
     document.getElementById('resNextBtn').addEventListener('click', function () {
       document.getElementById('resStep1').classList.remove('is-active');

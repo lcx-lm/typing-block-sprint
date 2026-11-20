@@ -1101,6 +1101,25 @@
     if (G.state === 'PLAYING' && !G.paused) pause();
   }
 
+  // 退出确认弹窗要用的当前进度快照
+  function getQuitInfo() {
+    var avg = G.wordsCleared > 0 ? G.levelScore / G.wordsCleared : 0;
+    var need = (G.mode === 'solo' && isFinite(G.levelTarget))
+      ? Math.max(0, G.levelTarget - G.levelScore) : 0;
+    return {
+      mode: G.mode,
+      score: G.score,
+      levelScore: G.levelScore,
+      wordsCleared: G.wordsCleared,
+      cleared: G.cleared,
+      startLevel: G.startLevel,
+      aiScore: Math.round(G.aiScore),
+      versusWinner: G.versusWinner,
+      // 按当前平均每词得分估算还差多少词达成关卡目标
+      remainingWords: need <= 0 ? 0 : Math.max(1, Math.ceil(need / Math.max(1, avg)))
+    };
+  }
+
   // 主动结束本局（暂停弹层里的「退出本局」）。
   // 单机等模式按当前进度结算；AI 对战退出视为认输。
   function quit() {
@@ -1203,6 +1222,7 @@
     resume: resume,
     autoPause: autoPause,
     quit: quit,
+    getQuitInfo: getQuitInfo,
 
     setSound: function (on) { soundOn = !!on; },
     isSoundOn: function () { return soundOn; },
