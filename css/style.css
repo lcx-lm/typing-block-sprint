@@ -375,7 +375,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 
 /* 大字结论：所有胜负文案都逐字从上方掉落到位（容器不再整体弹出）
    大字上方预留 --drop-h 的空白作为掉落区，字只在预留区内下落，不会压到上方标题或下方数据卡片 */
-.result-verdict.is-drop{display:flex;justify-content:center;letter-spacing:0;animation:none;margin-top:0;padding-top:calc(var(--drop-h,36px) + 8px)}
+.result-verdict.is-drop{display:flex;justify-content:center;letter-spacing:0;animation:none;margin-top:0;padding-top:calc(var(--drop-h,20px) + 6px)}
 .drop-char{
   display:inline-block;
   animation:verdictDrop .72s cubic-bezier(.34,.03,.5,1.4) both;
@@ -383,7 +383,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 .drop-char + .drop-char{margin-left:.16em}
 @keyframes verdictDrop{
-  0%{transform:translateY(calc(-1 * var(--drop-h,36px)));opacity:0}
+  0%{transform:translateY(calc(-1 * var(--drop-h,20px)));opacity:0}
   40%{opacity:1}
   70%{transform:translateY(6px)}
   86%{transform:translateY(-3px)}
@@ -426,9 +426,9 @@ body[data-state="RESULT"] .user-strip{display:none}
 .rank-none{margin-top:22px;text-align:center;font-size:14px;color:var(--dim2);padding:18px;background:var(--panel2);border:1px solid var(--line);border-radius:12px}
 @media (max-width:560px){
   .result-verdict{font-size:42px;letter-spacing:.1em}
-  .result-verdict.is-drop{--drop-h:30px}
+  .result-verdict.is-drop{--drop-h:16px}
   .rank-line-delta{font-size:24px}
-  .congrats-verdict{font-size:42px;--drop-h:30px}
+  .congrats-verdict{font-size:42px;--drop-h:16px}
   .congrats-score{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
@@ -902,7 +902,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 .congrats-status{margin-top:2px;font-size:12.5px;font-weight:700;letter-spacing:.14em;color:var(--dim2)}
 .congrats-verdict{
   display:flex;justify-content:center;margin-top:2px;
-  padding-top:calc(var(--drop-h,36px) + 8px);
+  padding-top:calc(var(--drop-h,20px) + 6px);
   font-size:52px;font-weight:900;line-height:1.15;color:var(--acc);
   text-shadow:0 0 26px rgba(94,234,212,.35);
 }
