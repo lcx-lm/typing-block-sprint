@@ -219,7 +219,7 @@
     '敲错一个字母只会清空连击，不扣爱心，别慌。屏幕上方有 3 颗爱心，方块掉到底部就会碎掉一颗。',
     '连续正确消除会累积连击，连击越高，单次得分加成越高。但一旦敲错，连击归零，所以稳比快更重要。',
     '每关限时 50 秒，第一关大约打掉 10 个词就能过关，之后目标逐关提高。通过后会自动解锁下一关，下次进来可以直接选已通关的关卡。',
-    '每局结束会结算得分、准确率、WPM 和最高连击，成绩会存进「最近表现」记录。准备好了吗？点击开始游戏。'
+    '每局结束会结算得分、准确率、手速和最高连击，成绩会存进「最近表现」记录。准备好了吗？点击开始游戏。'
   ];
 
   var ONBOARD = {
@@ -883,7 +883,7 @@
     document.getElementById('resWpm').textContent = stats.wpm;
     document.getElementById('resCombo').textContent = stats.maxCombo;
 
-    // 第一步数据区按模式统一排版：关卡/复习四项，冲刺得分+最佳 WPM，AI 对战换成左右对比表
+    // 第一步数据区按模式统一排版：关卡/复习四项，冲刺得分+最佳手速，AI 对战换成左右对比表
     var gridEl = document.getElementById('resGrid');
     var vsEl = document.getElementById('resVsTable');
     document.getElementById('resCap1').textContent = '本局得分';
@@ -894,9 +894,9 @@
     gridEl.classList.remove('is-two');
     vsEl.hidden = true;
     if (mode === 'sprint') {
-      // 冲刺只展示得分 + 最佳 WPM，两列铺满
+      // 冲刺只展示得分 + 最佳手速，两列铺满
       gridEl.classList.add('is-two');
-      document.getElementById('resCap2').textContent = '最佳 WPM';
+      document.getElementById('resCap2').textContent = '最佳手速';
       document.getElementById('resAcc').textContent = DATA.bestWpm;
       document.getElementById('resItem3').hidden = true;
       document.getElementById('resItem4').hidden = true;

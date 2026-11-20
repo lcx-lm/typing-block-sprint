@@ -509,8 +509,8 @@
     var sub = document.createElement('div');
     sub.className = 'congrats-sub';
     sub.textContent = isFinal
-      ? '第 ' + level + ' 关完成，全部 ' + G.levels.length + ' 关已通关'
-      : '第 ' + level + ' 关完成，下一关已解锁';
+      ? '全部 ' + G.levels.length + ' 关已通关'
+      : '第 ' + level + ' 关已通关';
     wrap.appendChild(sub);
 
     var scores = document.createElement('div');
@@ -518,7 +518,7 @@
     var statItems = [
       ['本关得分', G.levelScore],
       ['本关用时', used + ' 秒'],
-      ['WPM', calcWpm()]
+      ['手速', calcWpm()]
     ];
     if (isFinal) statItems.push(['已通关', G.cleared + ' 关']);
     else statItems.push(['下一关目标', nextLv ? nextLv.target : '—']);

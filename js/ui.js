@@ -231,7 +231,7 @@
 
       var thead = document.createElement('thead');
       var htr = document.createElement('tr');
-      ['日期', '模式', '得分', 'WPM', '准确率'].forEach(function (title) {
+      ['日期', '模式', '得分', '手速', '准确率'].forEach(function (title) {
         var th = document.createElement('th');
         th.textContent = title;
         htr.appendChild(th);
