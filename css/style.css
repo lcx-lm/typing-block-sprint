@@ -325,6 +325,18 @@ body[data-state="RESULT"] .user-strip{display:none}
   border:1px solid var(--line);font-weight:700;
 }
 .result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.result-grid[hidden],.vs-table[hidden],.res-item[hidden],.record-badge[hidden],.res-record-row[hidden]{display:none}
+.result-grid.is-two{grid-template-columns:repeat(2,1fr)}
+.vs-table{margin-top:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
+.vs-row{
+  display:grid;grid-template-columns:1.3fr 1fr 1fr;align-items:center;
+  padding:9px 14px;border-top:1px solid rgba(31,43,61,.6);
+}
+.vs-row:first-child{border-top:none}
+.vs-row span{font-size:11px;letter-spacing:.08em;color:var(--dim2)}
+.vs-row b{text-align:center;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--tx)}
+.vs-head{background:rgba(255,255,255,.03)}
+.vs-head b{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);font-weight:800}
 .result-status{margin-top:10px;font-size:12.5px;color:var(--dim);letter-spacing:.02em}
 .result-status.is-win{color:var(--acc);font-weight:800}
 .res-item{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 10px;text-align:center}
@@ -440,6 +452,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 .modal-body ul{margin:6px 0 6px 18px}
 .modal-body li{margin:4px 0}
 .modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
+.modal-foot.is-center{justify-content:center}
 .modal-input{
   width:100%;margin-top:6px;
   background:#0a1018;border:1px solid var(--line-strong);border-radius:10px;
@@ -881,7 +894,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 .congrats-title{font-size:20px;font-weight:900;letter-spacing:.08em;color:var(--gold)}
 .congrats-sub{font-size:12.5px;color:var(--dim);margin-top:6px}
 .congrats-score{
-  display:flex;justify-content:center;gap:10px;flex-wrap:wrap;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
   margin:16px 0 2px;
 }
 .congrats-score div{

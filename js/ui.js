@@ -366,10 +366,12 @@
       card.setAttribute('role', 'dialog');
       card.setAttribute('aria-modal', 'true');
 
-      var title = document.createElement('div');
-      title.className = 'modal-title';
-      title.textContent = opts.title || '';
-      card.appendChild(title);
+      if (opts.title) {
+        var title = document.createElement('div');
+        title.className = 'modal-title';
+        title.textContent = opts.title;
+        card.appendChild(title);
+      }
 
       var body = document.createElement('div');
       body.className = 'modal-body';
@@ -383,7 +385,7 @@
 
       if (opts.actions && opts.actions.length) {
         var foot = document.createElement('div');
-        foot.className = 'modal-foot';
+        foot.className = 'modal-foot' + (opts.centerActions ? ' is-center' : '');
         opts.actions.forEach(function (act) {
           var btn = document.createElement('button');
           btn.className = 'btn ' + (act.primary ? 'primary' : 'ghost');

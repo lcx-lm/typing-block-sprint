@@ -485,11 +485,13 @@
     setTimeout(function () { beep(1047, 0.22, 'triangle', 0.05); }, 400);
   }
 
-  // 通关祝贺弹窗：进入下一关 / 退出
-  function showClearDialog() {
+  // 通关祝贺弹窗：进入下一关 / 退出；最后一关则进入结算
+  function showClearDialog(isFinal) {
     var ui = global.UI;
     var level = G.levelIndex + 1;
-    var nextLv = G.levels[G.levelIndex + 1];
+    var nextLv = isFinal ? null : G.levels[G.levelIndex + 1];
+    var lv = G.levels[G.levelIndex];
+    var used = lv ? Math.max(0, Math.round(lv.timeLimit - Math.max(0, G.levelTime))) : 0;
 
     var wrap = document.createElement('div');
     wrap.className = 'congrats';
@@ -506,16 +508,21 @@
 
     var sub = document.createElement('div');
     sub.className = 'congrats-sub';
-    sub.textContent = '第 ' + level + ' 关完成，下一关已解锁';
+    sub.textContent = isFinal
+      ? '第 ' + level + ' 关完成，全部 ' + G.levels.length + ' 关已通关'
+      : '第 ' + level + ' 关完成，下一关已解锁';
     wrap.appendChild(sub);
 
     var scores = document.createElement('div');
     scores.className = 'congrats-score';
-    [
+    var statItems = [
       ['本关得分', G.levelScore],
-      ['当前总分', G.score],
-      ['下一关目标', nextLv ? nextLv.target : '—']
-    ].forEach(function (item) {
+      ['本关用时', used + ' 秒'],
+      ['WPM', calcWpm()]
+    ];
+    if (isFinal) statItems.push(['已通关', G.cleared + ' 关']);
+    else statItems.push(['下一关目标', nextLv ? nextLv.target : '—']);
+    statItems.forEach(function (item) {
       var box = document.createElement('div');
       var cap = document.createElement('span');
       cap.textContent = item[0];
@@ -527,11 +534,19 @@
     });
     wrap.appendChild(scores);
 
-    ui.openModal({
-      title: '关卡完成',
-      content: wrap,
-      closeOnMask: false,
-      actions: [
+    var actions;
+    if (isFinal) {
+      actions = [{
+        label: '查看结算',
+        primary: true,
+        onClick: function () {
+          ui.closeModal();
+          G.failReason = 'win';
+          endGame();
+        }
+      }];
+    } else {
+      actions = [
         {
           label: '退出',
           onClick: function () {
@@ -548,7 +563,14 @@
             beginLevel(G.levelIndex + 1);
           }
         }
-      ]
+      ];
+    }
+
+    ui.openModal({
+      content: wrap,
+      closeOnMask: false,
+      centerActions: true,
+      actions: actions
     });
   }
 
@@ -564,12 +586,10 @@
     playLevelClearSound();
 
     if (isLast) {
-      G.failReason = 'win';
       G.transitioning = true;
       renderHUD();
       global.UI.celebrate();
-      global.UI.toast('全部 ' + G.levels.length + ' 关通过！');
-      setTimeout(endGame, 550);
+      showClearDialog(true);
       return;
     }
 
@@ -1152,6 +1172,8 @@
       mode: G.mode,
       aiScore: Math.round(G.aiScore),
       aiLives: G.ai ? G.ai.lives : 0,
+      aiMaxCombo: G.ai ? G.ai.maxCombo : 0,
+      livesLeft: G.lives,
       versusWinner: G.versusWinner,
       elapsedMs: G.elapsedMs,
       levelIndex: G.levelIndex + 1,

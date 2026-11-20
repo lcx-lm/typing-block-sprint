@@ -715,10 +715,10 @@
     rankTimers = [];
   }
 
-  // 大字结论：失败用石头碎裂动效，其它用弹出动效
+  // 大字结论：只有「失败」用石头碎裂动效，其余用弹出动效
   function renderVerdict(el, text, cls) {
     el.className = 'result-verdict ' + cls;
-    if (cls === 'is-lose') {
+    if (cls === 'is-lose' && text === '失败') {
       el.classList.add('is-shatter');
       buildShatter(el, text);
     } else {
@@ -910,6 +910,34 @@
     document.getElementById('resWpm').textContent = stats.wpm;
     document.getElementById('resCombo').textContent = stats.maxCombo;
 
+    // 第一步数据区按模式统一排版：关卡/复习四项，冲刺得分+最佳 WPM，AI 对战换成左右对比表
+    var gridEl = document.getElementById('resGrid');
+    var vsEl = document.getElementById('resVsTable');
+    document.getElementById('resCap1').textContent = '本局得分';
+    document.getElementById('resCap2').textContent = '准确率';
+    document.getElementById('resItem3').hidden = false;
+    document.getElementById('resItem4').hidden = false;
+    gridEl.hidden = false;
+    gridEl.classList.remove('is-two');
+    vsEl.hidden = true;
+    if (mode === 'sprint') {
+      // 冲刺只展示得分 + 最佳 WPM，两列铺满
+      gridEl.classList.add('is-two');
+      document.getElementById('resCap2').textContent = '最佳 WPM';
+      document.getElementById('resAcc').textContent = DATA.bestWpm;
+      document.getElementById('resItem3').hidden = true;
+      document.getElementById('resItem4').hidden = true;
+    } else if (mode === 'versus') {
+      gridEl.hidden = true;
+      vsEl.hidden = false;
+      document.getElementById('vsYouScore').textContent = stats.score;
+      document.getElementById('vsAiScore').textContent = stats.aiScore;
+      document.getElementById('vsYouCombo').textContent = stats.maxCombo;
+      document.getElementById('vsAiCombo').textContent = stats.aiMaxCombo || 0;
+      document.getElementById('vsYouLives').textContent = stats.livesLeft;
+      document.getElementById('vsAiLives').textContent = stats.aiLives;
+    }
+
     // 结算状态：按模式区分文案
     var status = document.getElementById('resStatus');
     var winView;
@@ -964,9 +992,9 @@
       bigText = stats.failReason === 'lives' ? '复习结束' : '复习完成';
       bigCls = 'is-mid';
     } else if (mode === 'sprint') {
-      if (stats.failReason === 'quit') { bigText = '已退出'; bigCls = 'is-mid'; }
-      else if (outcome.delta > 0) { bigText = '达标'; bigCls = 'is-win'; }
-      else { bigText = '未达标'; bigCls = 'is-lose'; }
+      // 冲刺按是否刷新最高分给出结论
+      bigText = isNewRecord ? '破纪录' : '未破纪录';
+      bigCls = isNewRecord ? 'is-win' : 'is-lose';
     } else if (mode === 'versus') {
       bigText = cmp;
       bigCls = cmp === '胜利' ? 'is-win' : (cmp === '失败' ? 'is-lose' : 'is-mid');
@@ -1010,11 +1038,12 @@
       resetRankStep2(rankAnim);
     }
 
-    // 破纪录标记：只有真的破纪录才显示（复习局不参与记录）
+    // 破纪录标记：冲刺已用大字结论展示，其余模式只在真破纪录时补一个徽章
     var recBadge = document.getElementById('resNew');
-    recBadge.hidden = !(isNewRecord && !isReview);
-    if (!recBadge.hidden) recBadge.textContent = '破纪录';
-    recBadge.classList.remove('plain');
+    var missBadge = document.getElementById('resMiss');
+    recBadge.hidden = !(isNewRecord && !isReview && mode !== 'sprint');
+    missBadge.hidden = true;
+    document.getElementById('resRecordRow').hidden = recBadge.hidden;
 
     // 打错的单词：去重后最多 10 个
     var wrap = document.getElementById('resWrong');
