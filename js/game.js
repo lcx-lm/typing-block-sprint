@@ -102,6 +102,9 @@
     levelScore: 0,
     levelTarget: 0,
     levelTime: 0,
+    lvCorrectChars: 0,
+    lvErrorCount: 0,
+    lvMaxCombo: 0,
     startLevel: 1,
     cleared: 0,
     transitioning: false,
@@ -402,6 +405,7 @@
     var blame = pickBlameWord();
 
     G.errorCount++;
+    G.lvErrorCount++;
     G.combo = 0;
     G.input = '';
     if (blame) {
@@ -453,6 +457,7 @@
     // 先加连击，再按公式计分（combo 含本次）
     G.combo++;
     if (G.combo > G.maxCombo) G.maxCombo = G.combo;
+    if (G.combo > G.lvMaxCombo) G.lvMaxCombo = G.combo;
 
     var coef = DIFFS[G.diffKey].coef;
     var gain = Math.floor(b.word.length * 10 * coef * (1 + G.combo * 0.1));
@@ -501,7 +506,11 @@
     var level = G.levelIndex + 1;
     var nextLv = isFinal ? null : G.levels[G.levelIndex + 1];
     var lv = G.levels[G.levelIndex];
-    var used = lv ? Math.max(0, Math.round(lv.timeLimit - Math.max(0, G.levelTime))) : 0;
+    // 本关四项数据与结算页同一套：得分 / 准确率 / 打字速度 / 最高连击，统计范围统一为本关
+    var usedMs = lv ? Math.max(0, (lv.timeLimit - Math.max(0, G.levelTime)) * 1000) : 0;
+    var lvTotalChars = G.lvCorrectChars + G.lvErrorCount;
+    var lvAccuracy = lvTotalChars > 0 ? Math.round(G.lvCorrectChars / lvTotalChars * 100) : 100;
+    var lvWpm = usedMs > 800 ? Math.round((G.lvCorrectChars / 5) / (usedMs / 60000)) : 0;
 
     var wrap = document.createElement('div');
     wrap.className = 'congrats';
@@ -528,11 +537,10 @@
     scores.className = 'congrats-score';
     var statItems = [
       ['本关得分', G.levelScore],
-      ['本关用时', used + ' 秒'],
-      ['手速', calcWpm()]
+      ['本关准确率', lvAccuracy + '%'],
+      ['本关打字速度', lvWpm + ' 词/分'],
+      ['本关最高连击', G.lvMaxCombo]
     ];
-    if (isFinal) statItems.push(['已通关', G.cleared + ' 关']);
-    else statItems.push(['下一关目标', nextLv ? nextLv.target : '—']);
     statItems.forEach(function (item) {
       var box = document.createElement('div');
       var cap = document.createElement('span');
@@ -544,6 +552,26 @@
       scores.appendChild(box);
     });
     wrap.appendChild(scores);
+
+    // 关卡进度信息单独一行，不混进四张核心数据卡片
+    if (!isFinal && nextLv) {
+      var nextRow = document.createElement('div');
+      nextRow.className = 'congrats-next';
+      var nextCap = document.createElement('span');
+      nextCap.className = 'congrats-next-cap';
+      nextCap.textContent = '下一关挑战';
+      var nextLine = document.createElement('div');
+      nextLine.className = 'congrats-next-row';
+      var nextText = document.createElement('span');
+      nextText.textContent = '第' + numToCn(level + 1) + '关目标分数';
+      var nextVal = document.createElement('b');
+      nextVal.textContent = nextLv.target;
+      nextLine.appendChild(nextText);
+      nextLine.appendChild(nextVal);
+      nextRow.appendChild(nextCap);
+      nextRow.appendChild(nextLine);
+      wrap.appendChild(nextRow);
+    }
 
     // 本局加分进度条：与结算页同一套组件，数据与动画由入口层注入
     if (typeof Game.renderClearRank === 'function') {
@@ -634,6 +662,9 @@
     G.levelScore = 0;
     G.levelTarget = lv.target;
     G.levelTime = lv.timeLimit;
+    G.lvCorrectChars = 0;
+    G.lvErrorCount = 0;
+    G.lvMaxCombo = 0;
     G.lives = LIVES_MAX;   // 每关重置 3 颗爱心
     G.combo = 0;
     G.input = '';
@@ -931,6 +962,7 @@
 
     G.input = next;
     G.correctChars++;
+    G.lvCorrectChars++;
 
     // 完整命中：优先消除最靠下（y 最大）的那个
     var exact = [];
