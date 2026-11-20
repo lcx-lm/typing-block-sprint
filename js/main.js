@@ -732,12 +732,12 @@
     var wrap = document.createElement('div');
     wrap.className = 'shatter-wrap';
     var tiles = [
-      { clip: 'polygon(0 0, 33.33% 0, 33.33% 50%, 0 50%)', to: 'translate(-36px,-24px) rotate(-15deg)' },
-      { clip: 'polygon(33.33% 0, 66.67% 0, 66.67% 50%, 33.33% 50%)', to: 'translate(0,-40px) rotate(8deg)' },
-      { clip: 'polygon(66.67% 0, 100% 0, 100% 50%, 66.67% 50%)', to: 'translate(36px,-22px) rotate(16deg)' },
-      { clip: 'polygon(0 50%, 33.33% 50%, 33.33% 100%, 0 100%)', to: 'translate(-30px,34px) rotate(13deg)' },
-      { clip: 'polygon(33.33% 50%, 66.67% 50%, 66.67% 100%, 33.33% 100%)', to: 'translate(2px,42px) rotate(-10deg)' },
-      { clip: 'polygon(66.67% 50%, 100% 50%, 100% 100%, 66.67% 100%)', to: 'translate(38px,30px) rotate(-17deg)' }
+      { clip: 'polygon(0 0, 33.33% 0, 33.33% 50%, 0 50%)', to: 'translate(-5px,-4px) rotate(-1.6deg)' },
+      { clip: 'polygon(33.33% 0, 66.67% 0, 66.67% 50%, 33.33% 50%)', to: 'translate(0,-5px) rotate(.8deg)' },
+      { clip: 'polygon(66.67% 0, 100% 0, 100% 50%, 66.67% 50%)', to: 'translate(5px,-3px) rotate(1.8deg)' },
+      { clip: 'polygon(0 50%, 33.33% 50%, 33.33% 100%, 0 100%)', to: 'translate(-4px,4px) rotate(1.4deg)' },
+      { clip: 'polygon(33.33% 50%, 66.67% 50%, 66.67% 100%, 33.33% 100%)', to: 'translate(1px,5px) rotate(-1deg)' },
+      { clip: 'polygon(66.67% 50%, 100% 50%, 100% 100%, 66.67% 100%)', to: 'translate(5px,4px) rotate(-1.8deg)' }
     ];
     for (var i = 0; i < tiles.length; i++) {
       var s = document.createElement('span');
