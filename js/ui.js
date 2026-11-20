@@ -479,7 +479,7 @@
       }
 
       var body = document.createElement('div');
-      body.className = 'modal-body';
+      body.className = 'modal-body' + (opts.bodyCenter ? ' is-center' : '');
       if (opts.content instanceof Node) {
         body.appendChild(opts.content);
       } else if (typeof opts.content === 'string') {
@@ -567,6 +567,7 @@
       this.openModal({
         title: title,
         titleCenter: !!(opts && opts.titleCenter),
+        bodyCenter: !!(opts && opts.bodyCenter),
         content: '<p>' + text + '</p>',
         actions: [
           { label: '取消', onClick: function () { UI.closeModal(); } },

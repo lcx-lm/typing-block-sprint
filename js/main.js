@@ -1520,7 +1520,7 @@
       }
       UI.confirm('是否退出？', lines.join('<br>'), function () {
         Game.quit();
-      }, { titleCenter: true });
+      }, { titleCenter: true, bodyCenter: true });
     });
 
     // 结算页
