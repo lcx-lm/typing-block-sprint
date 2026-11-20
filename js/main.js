@@ -701,6 +701,149 @@
     return after;
   }
 
+  /* ---------------- 结算页辅助：大字动效与段位结算动画 ---------------- */
+  var rankAnim = null;
+  var rankTimers = [];
+
+  function clearRankTimers() {
+    for (var i = 0; i < rankTimers.length; i++) clearTimeout(rankTimers[i]);
+    rankTimers = [];
+  }
+
+  // 大字结论：失败用石头碎裂动效，其它用弹出动效
+  function renderVerdict(el, text, cls) {
+    el.className = 'result-verdict ' + cls;
+    if (cls === 'is-lose') {
+      el.classList.add('is-shatter');
+      buildShatter(el, text);
+    } else {
+      el.classList.remove('is-shatter');
+      el.textContent = text;
+    }
+  }
+
+  function buildShatter(el, text) {
+    el.innerHTML = '';
+    var wrap = document.createElement('div');
+    wrap.className = 'shatter-wrap';
+    var tiles = [
+      { clip: 'polygon(0 0, 33.33% 0, 33.33% 50%, 0 50%)', to: 'translate(-36px,-24px) rotate(-15deg)' },
+      { clip: 'polygon(33.33% 0, 66.67% 0, 66.67% 50%, 33.33% 50%)', to: 'translate(0,-40px) rotate(8deg)' },
+      { clip: 'polygon(66.67% 0, 100% 0, 100% 50%, 66.67% 50%)', to: 'translate(36px,-22px) rotate(16deg)' },
+      { clip: 'polygon(0 50%, 33.33% 50%, 33.33% 100%, 0 100%)', to: 'translate(-30px,34px) rotate(13deg)' },
+      { clip: 'polygon(33.33% 50%, 66.67% 50%, 66.67% 100%, 33.33% 100%)', to: 'translate(2px,42px) rotate(-10deg)' },
+      { clip: 'polygon(66.67% 50%, 100% 50%, 100% 100%, 66.67% 100%)', to: 'translate(38px,30px) rotate(-17deg)' }
+    ];
+    for (var i = 0; i < tiles.length; i++) {
+      var s = document.createElement('span');
+      s.className = 'shard';
+      s.textContent = text;
+      s.style.webkitClipPath = tiles[i].clip;
+      s.style.clipPath = tiles[i].clip;
+      s.style.setProperty('--to', tiles[i].to);
+      s.style.setProperty('--delay', (i * 0.035) + 's');
+      wrap.appendChild(s);
+    }
+    for (var j = 0; j < 10; j++) {
+      var d = document.createElement('i');
+      d.className = 'debris';
+      d.style.setProperty('--dx', (Math.random() * 180 - 90) + 'px');
+      d.style.setProperty('--dy', (Math.random() * 130 - 30) + 'px');
+      d.style.setProperty('--dr', (Math.random() * 420 - 210) + 'deg');
+      d.style.setProperty('--delay', (0.26 + Math.random() * 0.22) + 's');
+      wrap.appendChild(d);
+    }
+    el.appendChild(wrap);
+  }
+
+  // 把第二步重置到“只显示原有积分”的初始状态
+  function resetRankStep2(a) {
+    clearRankTimers();
+    var beforeEl = document.getElementById('resRankBefore');
+    var deltaEl = document.getElementById('resRankDelta');
+    var afterCol = document.querySelector('.rs-after-col');
+    var rankName = document.getElementById('resRankName');
+    var progText = document.getElementById('resRankProgressText');
+    var fill = document.getElementById('resRankFill');
+    var label = document.getElementById('resRankBarLabel');
+
+    beforeEl.textContent = a.before;
+    deltaEl.textContent = (a.delta > 0 ? '+' : '') + a.delta;
+    deltaEl.className = 'rs-op ' + (a.delta > 0 ? 'up' : (a.delta < 0 ? 'down' : 'flat'));
+    deltaEl.hidden = true;
+    document.getElementById('resRankAfter').textContent = a.after;
+    afterCol.hidden = true;
+    rankName.textContent = a.rankName;
+    rankName.hidden = true;
+    progText.textContent = a.progText;
+    progText.hidden = true;
+
+    var rspan = a.denom ? (a.denom - a.curMin) : 1;
+    var pctBefore = a.denom ? Math.max(0, Math.min(100, ((a.before - a.curMin) / rspan) * 100)) : 100;
+    fill.style.transition = 'none';
+    fill.style.width = pctBefore + '%';
+    label.textContent = a.denom ? (a.before + '/' + a.denom) : String(a.before);
+    // 触发重排，保证后续 width 变化能触发过渡
+    void fill.offsetWidth;
+    fill.style.transition = '';
+  }
+
+  function tweenLabel(el, from, to, denom, dur) {
+    var start = null;
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      el.textContent = denom ? (to + '/' + denom) : String(to);
+    }
+    function step(ts) {
+      if (done) return;
+      if (!start) start = ts;
+      var p = Math.min(1, (ts - start) / dur);
+      var val = Math.round(from + (to - from) * p);
+      el.textContent = denom ? (val + '/' + denom) : String(val);
+      if (p < 1) global.requestAnimationFrame(step);
+      else finish();
+    }
+    global.requestAnimationFrame(step);
+    // 兜底：rAF 在后台标签页会被节流，用定时器保证最终值一定到位
+    setTimeout(finish, dur + 100);
+  }
+
+  // 点“下一步”后依次揭示：扣分项 → 当前总分 → 进度条回退 → 段位名
+  function playRankSettle() {
+    if (!rankAnim) return;
+    var a = rankAnim;
+    var deltaEl = document.getElementById('resRankDelta');
+    var afterCol = document.querySelector('.rs-after-col');
+    var rankName = document.getElementById('resRankName');
+    var progText = document.getElementById('resRankProgressText');
+    var fill = document.getElementById('resRankFill');
+    var label = document.getElementById('resRankBarLabel');
+
+    clearRankTimers();
+    rankTimers.push(setTimeout(function () {
+      deltaEl.hidden = false;
+      deltaEl.classList.add('rs-reveal');
+    }, 450));
+    rankTimers.push(setTimeout(function () {
+      afterCol.hidden = false;
+      afterCol.classList.add('rs-reveal');
+    }, 950));
+    rankTimers.push(setTimeout(function () {
+      var rspan = a.denom ? (a.denom - a.curMin) : 1;
+      var pctAfter = a.denom ? Math.max(0, Math.min(100, ((a.after - a.curMin) / rspan) * 100)) : 100;
+      fill.style.width = pctAfter + '%';
+      tweenLabel(label, a.before, a.after, a.denom, 650);
+    }, 1300));
+    rankTimers.push(setTimeout(function () {
+      rankName.hidden = false;
+      rankName.classList.add('rs-reveal');
+      progText.hidden = false;
+      progText.classList.add('rs-reveal');
+    }, 2050));
+  }
+
   /* ---------------- 结算 ---------------- */
   function handleGameEnd(stats) {
     var mode = stats.mode || 'solo';
@@ -825,14 +968,15 @@
       else if (stats.failReason === 'time') { bigText = '时间到'; bigCls = winView ? 'is-win' : 'is-lose'; }
       else { bigText = '失败'; bigCls = 'is-lose'; }
     }
-    verdict.textContent = bigText;
-    verdict.className = 'result-verdict ' + bigCls;
+    renderVerdict(verdict, bigText, bigCls);
 
-    // 第二步：段位积分变化与进度条
+    // 第二步：段位积分变化与进度条（错词复习不参与）
     var summaryEl = document.getElementById('resRankSummary');
     var progEl = document.getElementById('resRankProgress');
     var reviewNote = document.getElementById('resReviewNote');
+    clearRankTimers();
     if (isReview) {
+      rankAnim = null;
       summaryEl.hidden = true;
       progEl.hidden = true;
       reviewNote.hidden = false;
@@ -841,29 +985,28 @@
       progEl.hidden = false;
       reviewNote.hidden = true;
 
-      document.getElementById('resRankBefore').textContent = beforePoints;
-      var deltaEl = document.getElementById('resRankDelta');
-      deltaEl.textContent = (outcome.delta > 0 ? '+' : '') + outcome.delta;
-      deltaEl.className = 'rs-op ' + (outcome.delta > 0 ? 'up' : (outcome.delta < 0 ? 'down' : 'flat'));
-      document.getElementById('resRankAfter').textContent = DATA.rankPoints;
-      document.getElementById('resRankName').textContent = afterRank.name;
-
-      var pct = 100;
+      var denom = afterRank.next ? afterRank.next.min : null;
       var progText = '已达到最高段位';
       if (afterRank.next) {
-        var rspan = afterRank.next.min - afterRank.min;
-        pct = Math.max(0, Math.min(100, ((DATA.rankPoints - afterRank.min) / rspan) * 100));
         progText = '距 ' + afterRank.next.name + ' 还差 ' + Math.max(0, afterRank.next.min - DATA.rankPoints) + ' 分';
       }
-      document.getElementById('resRankProgressText').textContent = progText;
-      document.getElementById('resRankFill').style.width = pct + '%';
+      rankAnim = {
+        before: beforePoints,
+        after: DATA.rankPoints,
+        delta: outcome.delta,
+        denom: denom,
+        curMin: afterRank.min,
+        rankName: afterRank.name,
+        progText: progText
+      };
+      resetRankStep2(rankAnim);
     }
 
-    // 破纪录标记：两种状态都给明确文案（复习局不参与记录）
+    // 破纪录标记：只有真的破纪录才显示（复习局不参与记录）
     var recBadge = document.getElementById('resNew');
-    recBadge.hidden = isReview;
-    recBadge.textContent = isNewRecord ? '破纪录' : '未破纪录';
-    recBadge.classList.toggle('plain', !isNewRecord);
+    recBadge.hidden = !(isNewRecord && !isReview);
+    if (!recBadge.hidden) recBadge.textContent = '破纪录';
+    recBadge.classList.remove('plain');
 
     // 打错的单词：去重后最多 10 个
     var wrap = document.getElementById('resWrong');
@@ -1239,6 +1382,7 @@
     document.getElementById('resNextBtn').addEventListener('click', function () {
       document.getElementById('resStep1').classList.remove('is-active');
       document.getElementById('resStep2').classList.add('is-active');
+      playRankSettle();
     });
 
     // 结算页
