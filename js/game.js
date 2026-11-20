@@ -109,6 +109,7 @@
     lvCorrectChars: 0,
     lvErrorCount: 0,
     lvMaxCombo: 0,
+    lvWords: 0,
     startLevel: 1,
     cleared: 0,
     transitioning: false,
@@ -284,7 +285,15 @@
 
   function refillBag(pool, maxLen) {
     var items = pool.filter(function (w) { return w.word.length <= maxLen; });
-    if (!items.length) items = pool.slice();
+    if (!items.length) {
+      // 关卡词池里没有符合长度上限的词时，退回本池最短的词，
+      // 而不是把整池塞进来，避免简单难度刷出超长单词。
+      var minLen = Infinity;
+      for (var i = 0; i < pool.length; i++) {
+        if (pool[i].word.length < minLen) minLen = pool[i].word.length;
+      }
+      items = pool.filter(function (w) { return w.word.length === minLen; });
+    }
     shuffleInPlace(items);
     // 新一轮的第一个词避开上一轮的最后一个词，避免「刚打完又冒出来」
     if (items.length > 1 && items[0].word === G.bagLastWord) {
@@ -298,6 +307,8 @@
     if (G.bagPool !== pool || G.bagMaxLen !== maxLen) {
       G.bagPool = pool;
       G.bagMaxLen = maxLen;
+      // 词池变了（例如进入下一关）：旧袋子里剩下的词作废，避免串关
+      G.bag = [];
     }
     if (!G.bag.length) refillBag(pool, maxLen);
   }
@@ -524,6 +535,7 @@
     G.score += gain;
     G.levelScore += gain;
     G.wordsCleared++;
+    G.lvWords++;
 
     G.input = '';
 
@@ -735,6 +747,7 @@
     G.lvCorrectChars = 0;
     G.lvErrorCount = 0;
     G.lvMaxCombo = 0;
+    G.lvWords = 0;
     G.lives = LIVES_MAX;   // 每关重置 3 颗爱心
     G.combo = 0;
     G.input = '';
@@ -975,6 +988,10 @@
   function handleKeydown(e) {
     if (G.state !== 'PLAYING') return;
 
+    // 暂停确认、设置等弹窗打开时，不让对局快捷键（含 Esc 继续）穿透
+    var ui = global.UI;
+    if (ui && ui.els && ui.els.modalRoot && ui.els.modalRoot.children.length) return;
+
     // 暂停状态下只响应 Esc 继续
     if (G.paused) {
       if (e.key === 'Escape') {
@@ -1020,12 +1037,16 @@
 
     // 只要有一个玩家方块以 next 为前缀，就接受这次输入
     var hasPrefix = false;
+    var hasPlayerBlock = false;
     for (var i = 0; i < G.blocks.length; i++) {
       if (G.blocks[i].owner === 'ai') continue;
+      hasPlayerBlock = true;
       if (G.blocks[i].word.indexOf(next) === 0) { hasPrefix = true; break; }
     }
 
     if (!hasPrefix) {
+      // 屏幕上还没有任何玩家方块时（开局空档、刚清空），不把这次按键算作错误
+      if (!hasPlayerBlock) return;
       registerError();
       return;
     }
@@ -1255,7 +1276,14 @@
 
   // 退出确认弹窗要用的当前进度快照
   function getQuitInfo() {
-    var avg = G.wordsCleared > 0 ? G.levelScore / G.wordsCleared : 0;
+    // 平均每词得分要按「本关」计算：跨关后 levelScore 从 0 开始，
+    // 若混用全局 wordsCleared 会算出 0，导致「还差几百个词」的离谱提示。
+    var avg = G.lvWords > 0 ? G.levelScore / G.lvWords : 0;
+    if (!(avg > 0)) {
+      // 本关还没消除单词：用当前关词池的平均词长估一个基础分
+      var lv = G.levels[G.levelIndex];
+      avg = 10 * DIFFS[G.diffKey].coef * avgWordLength(lv ? lv.pool : []);
+    }
     var need = (G.mode === 'solo' && isFinite(G.levelTarget))
       ? Math.max(0, G.levelTarget - G.levelScore) : 0;
     return {

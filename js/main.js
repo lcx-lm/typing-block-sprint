@@ -77,6 +77,13 @@
 
     var wb = ST.getJSON('wrongBook', {});
     DATA.wrongBook = wb && typeof wb === 'object' && !Array.isArray(wb) ? wb : {};
+    // 兼容旧格式/损坏数据：只保留带合法 word 字段的条目，避免复习时崩溃
+    Object.keys(DATA.wrongBook).forEach(function (k) {
+      var arr = DATA.wrongBook[k];
+      DATA.wrongBook[k] = Array.isArray(arr) ? arr.filter(function (item) {
+        return item && typeof item === 'object' && typeof item.word === 'string' && item.word;
+      }) : [];
+    });
 
     DATA.rankPoints = Math.max(0, parseInt(ST.get('rankPoints', '0'), 10) || 0);
     var rr = ST.getJSON('rankRecord', {});
@@ -228,7 +235,7 @@
     '每敲对一个字母，方块上对应的字母会亮起来。敲完整单词，方块就会被消除并得分。方块下方有中文释义，边打边记。',
     '敲错一个字母只会清空连击，不扣爱心，别慌。屏幕上方有 3 颗爱心，方块掉到底部就会碎掉一颗。',
     '连续正确消除会累积连击，连击越高，单次得分加成越高。但一旦敲错，连击归零，所以稳比快更重要。',
-    '每关限时 50 秒，第一关大约打掉 10 个词就能过关，之后目标逐关提高。通过后会自动解锁下一关，下次进来可以直接选已通关的关卡。',
+    '每关限时 50 秒，第一关大约打掉 6 个词就能过关，之后目标逐关提高。通过后会自动解锁下一关，下次进来可以直接选已通关的关卡。',
     '每局结束会结算得分、准确率、打字速度和最高连击，成绩会存进「最近表现」记录。准备好了吗？点击开始游戏。'
   ];
 
@@ -655,15 +662,21 @@
       return { delta: -10, result: 'lose' };
     }
 
+    // stats.cleared 是「已通关到第几关」的绝对关卡号，
+    // 从中途关卡开始时需要换算成本局真正通过的关数，否则会少打多给分。
+    var runCleared = stats.cleared
+      ? Math.max(0, stats.cleared - (stats.startLevel || 1) + 1)
+      : 0;
+
     var delta;
     var result = 'lose';
     if (stats.win) {
       delta = 30;
       result = 'win';
-    } else if (stats.cleared >= 3) {
+    } else if (runCleared >= 3) {
       delta = 20;
       result = 'win';
-    } else if (stats.cleared >= 1) {
+    } else if (runCleared >= 1) {
       delta = 5;
       result = 'win';
     } else {
@@ -1370,6 +1383,8 @@
         Game.setSound(true);
         UI.applyTheme('light');
         refreshHome();
+        UI.closeModal();
+        startOnboarding();
         UI.toast('已恢复到初始状态');
       });
     });
@@ -1471,7 +1486,8 @@
         cleared: info.cleared,
         startLevel: info.startLevel,
         win: false,
-        versusWinner: info.versusWinner,
+        // 主动退出对战按认输结算（与 Game.quit() 一致），预览不能按当前比分算成胜利
+        versusWinner: info.mode === 'versus' ? 'ai' : info.versusWinner,
         aiScore: info.aiScore,
         wordsCleared: info.wordsCleared,
         failReason: 'quit'

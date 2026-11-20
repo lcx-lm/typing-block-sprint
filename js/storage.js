@@ -46,16 +46,18 @@
 
     get: function (key, fallback) {
       var k = PREFIX + key;
+      // 内存里只会有「写 localStorage 失败」的兜底值，优先级高于旧数据
+      if (Object.prototype.hasOwnProperty.call(memory, k)) return memory[k];
       try {
         if (!usable) {
           warnOnce();
-          return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : fallback;
+          return fallback;
         }
         var v = global.localStorage.getItem(k);
         return v === null ? fallback : v;
       } catch (e) {
         warnOnce();
-        return Object.prototype.hasOwnProperty.call(memory, k) ? memory[k] : fallback;
+        return fallback;
       }
     },
 
@@ -68,6 +70,8 @@
           return false;
         }
         global.localStorage.setItem(k, String(value));
+        // 之前失败留下的兜底值要清掉，避免读到过期数据
+        delete memory[k];
         return true;
       } catch (e) {
         warnOnce();
