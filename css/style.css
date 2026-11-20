@@ -875,6 +875,17 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 .rank-next{font-size:11.5px;color:var(--dim2);margin-top:7px}
 .rank-record{font-size:12.5px;color:var(--dim);margin-top:12px}
+.rank-ladder{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:grid;gap:6px}
+.rank-ladder .t{font-size:11px;letter-spacing:.12em;color:var(--dim2);margin-bottom:2px}
+.rank-step{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel2);font-size:12.5px;color:var(--dim);
+}
+.rank-step-name{font-weight:700}
+.rank-step-range{font-size:12px;color:var(--dim2);font-variant-numeric:tabular-nums}
+.rank-step.is-now{border-color:rgba(94,234,212,.55);background:rgba(94,234,212,.08);color:var(--acc)}
+.rank-step.is-now .rank-step-range{color:var(--acc)}
 .rank-rules{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .rank-rules .t{font-size:11px;letter-spacing:.12em;color:var(--dim2);margin-bottom:6px}
 .rank-rules ul{margin:0 0 0 18px;padding:0}

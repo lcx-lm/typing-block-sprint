@@ -1160,6 +1160,29 @@
       ' · 负 ' + DATA.rankRecord.losses;
     wrap.appendChild(rec);
 
+    var ladder = document.createElement('div');
+    ladder.className = 'rank-ladder';
+    var ladderTitle = document.createElement('div');
+    ladderTitle.className = 't';
+    ladderTitle.textContent = '段位门槛';
+    ladder.appendChild(ladderTitle);
+    RANKS.forEach(function (rk, i) {
+      var row = document.createElement('div');
+      row.className = 'rank-step' + (i === r.index ? ' is-now' : '');
+      var stepName = document.createElement('span');
+      stepName.className = 'rank-step-name';
+      stepName.textContent = rk.name;
+      var stepRange = document.createElement('span');
+      stepRange.className = 'rank-step-range';
+      stepRange.textContent = RANKS[i + 1]
+        ? rk.min + '–' + (RANKS[i + 1].min - 1) + ' 分'
+        : rk.min + ' 分以上';
+      row.appendChild(stepName);
+      row.appendChild(stepRange);
+      ladder.appendChild(row);
+    });
+    wrap.appendChild(ladder);
+
     var rules = document.createElement('div');
     rules.className = 'rank-rules';
     var t = document.createElement('div');
@@ -1173,7 +1196,7 @@
       '单机闯关：每首次通过一关，额外 +10',
       '限时冲刺：600 分及以上 +15；400–599 分 +5；低于 400 分 −8',
       'AI 对战：高于 AI +20；与 AI 持平 +5；低于 AI −10',
-      '积分最低为 0；段位门槛：青铜 0 / 白银 100 / 黄金 300 / 铂金 600 / 钻石 1000'
+      '积分最低为 0，不会扣成负数'
     ].forEach(function (text) {
       var li = document.createElement('li');
       li.textContent = text;
