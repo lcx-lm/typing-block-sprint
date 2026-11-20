@@ -859,6 +859,14 @@
       ST.setJSON('history', DATA.history);
     }
 
+    // 主动退出：积分与成绩照常结算入账，但不展示结算页，直接回到首页
+    if (stats.failReason === 'quit') {
+      Game.stop();
+      refreshHome();
+      UI.showScreen('HOME');
+      return;
+    }
+
     // 结算页数据
     document.getElementById('resScore').textContent = stats.score;
     document.getElementById('resAcc').textContent = stats.accuracy + '%';
