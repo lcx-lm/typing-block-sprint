@@ -545,6 +545,21 @@
     });
     wrap.appendChild(scores);
 
+    // 本局加分进度条：与结算页同一套组件，数据与动画由入口层注入
+    if (typeof Game.renderClearRank === 'function') {
+      var rankBox = document.createElement('div');
+      rankBox.className = 'congrats-rank';
+      wrap.appendChild(rankBox);
+      // 等大字逐字掉完再开始积分动画（与 CSS 的掉落节奏保持一致）
+      var dropMs = 600 + Math.max(0, word.length - 1) * 160 + 720;
+      Game.renderClearRank(rankBox, {
+        cleared: G.cleared,
+        startLevel: G.startLevel,
+        isFinal: !!isFinal,
+        delay: dropMs + 400
+      });
+    }
+
     var actions;
     if (isFinal) {
       actions = [{

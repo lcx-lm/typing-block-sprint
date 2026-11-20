@@ -725,15 +725,14 @@
 
   // 本局积分：先显示原有进度，再动态涨（或退）到结算后的进度
   // 节奏：等大字结论落定 → 弹出加减分 → 进度条从结算前位置走 / 退 → 揭示段位与文案
-  function playRankInline(a) {
-    clearRankTimers();
+  function playRankLine(els, a, timers) {
+    var deltaEl = els.delta;
+    var totalEl = els.total;
+    var rankName = els.rankName;
+    var fill = els.fill;
+    var label = els.label;
+    var note = els.note;
     var t0 = a.delay || 0;
-    var deltaEl = document.getElementById('resRankDelta');
-    var totalEl = document.getElementById('resRankAfter');
-    var rankName = document.getElementById('resRankName');
-    var fill = document.getElementById('resRankFill');
-    var label = document.getElementById('resRankBarLabel');
-    var note = document.getElementById('resRankProgressText');
 
     deltaEl.className = 'rank-line-delta' + (a.delta > 0 ? ' up' : (a.delta < 0 ? ' down' : ''));
     deltaEl.textContent = (a.delta > 0 ? '+' : '') + a.delta;
@@ -754,21 +753,92 @@
     fill.style.transition = '';
 
     // 1) 大字结论落定后，先弹出本局加减分
-    rankTimers.push(setTimeout(function () {
+    timers.push(setTimeout(function () {
       deltaEl.classList.add('is-reveal');
     }, t0));
     // 2) 稍作停顿，进度条从结算前位置开始前进 / 后退，数字同步滚动
-    rankTimers.push(setTimeout(function () {
+    timers.push(setTimeout(function () {
       fill.style.width = pctAfter + '%';
       tweenLabel(label, a.before, a.after, a.denom, 1200);
       tweenLabel(totalEl, a.before, a.after, null, 1200);
     }, t0 + 700));
     // 3) 进度条走完后再揭示段位名与下一段位提示
-    rankTimers.push(setTimeout(function () {
+    timers.push(setTimeout(function () {
       rankName.classList.add('is-reveal');
       note.classList.add('is-reveal');
     }, t0 + 700 + 1300));
   }
+
+  function playRankInline(a) {
+    clearRankTimers();
+    playRankLine({
+      delta: document.getElementById('resRankDelta'),
+      total: document.getElementById('resRankAfter'),
+      rankName: document.getElementById('resRankName'),
+      fill: document.getElementById('resRankFill'),
+      label: document.getElementById('resRankBarLabel'),
+      note: document.getElementById('resRankProgressText')
+    }, a, rankTimers);
+  }
+
+  // 通关弹窗里的加分进度条：容器由 game.js 提供，这里负责数据与动画
+  var clearDialogTimers = [];
+
+  Game.renderClearRank = function (box, info) {
+    // 按「现在退出本局会结算多少」预估积分，与最终结算页的数字保持一致
+    var outcome = calcRankOutcome({
+      mode: 'solo',
+      cleared: info.cleared,
+      startLevel: info.startLevel,
+      win: !!info.isFinal,
+      wordsCleared: 1,
+      failReason: 'time'
+    }, 'solo');
+    var before = DATA.rankPoints;
+    var after = Math.max(0, before + outcome.delta);
+    var afterRank = rankOf(after);
+    var denom = afterRank.next ? afterRank.next.min : null;
+    var progText = afterRank.next
+      ? '距' + afterRank.next.name + '还差 ' + Math.max(0, afterRank.next.min - after) + ' 分'
+      : '已达到最高段位';
+
+    var line = document.createElement('div');
+    line.className = 'rank-line';
+    line.innerHTML =
+      '<div class="rank-line-head">' +
+        '<span class="rank-line-cap">本局总计积分</span>' +
+        '<b class="rank-line-delta"></b>' +
+        '<span class="rank-line-caret">›</span>' +
+        '<span class="rank-line-pts"><b></b><i class="rank-line-rank"></i></span>' +
+      '</div>' +
+      '<div class="rank-glow-bar"><i class="rank-glow-fill"></i></div>' +
+      '<div class="rank-line-foot">' +
+        '<span class="rank-line-note"></span>' +
+        '<span class="rank-line-label"></span>' +
+      '</div>';
+    box.appendChild(line);
+
+    for (var i = 0; i < clearDialogTimers.length; i++) clearTimeout(clearDialogTimers[i]);
+    clearDialogTimers = [];
+
+    playRankLine({
+      delta: line.querySelector('.rank-line-delta'),
+      total: line.querySelector('.rank-line-pts b'),
+      rankName: line.querySelector('.rank-line-rank'),
+      fill: line.querySelector('.rank-glow-fill'),
+      label: line.querySelector('.rank-line-label'),
+      note: line.querySelector('.rank-line-note')
+    }, {
+      before: before,
+      after: after,
+      delta: outcome.delta,
+      denom: denom,
+      curMin: afterRank.min,
+      rankName: afterRank.name,
+      progText: progText,
+      delay: info.delay || 0
+    }, clearDialogTimers);
+  };
 
   function tweenLabel(el, from, to, denom, dur) {
     var start = null;
