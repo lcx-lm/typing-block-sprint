@@ -485,7 +485,17 @@
     setTimeout(function () { beep(1047, 0.22, 'triangle', 0.05); }, 400);
   }
 
-  // 通关祝贺弹窗：进入下一关 / 退出；最后一关则进入结算
+  // 序号转中文：1 → 一，23 → 二十三（与结算页「第一关」的写法保持一致）
+  function numToCn(n) {
+    var cn = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    var v = Math.max(0, parseInt(n, 10) || 0);
+    if (v < 10) return cn[v];
+    if (v < 20) return '十' + (v % 10 ? cn[v % 10] : '');
+    if (v < 100) return cn[Math.floor(v / 10)] + '十' + (v % 10 ? cn[v % 10] : '');
+    return String(v);
+  }
+
+  // 通关祝贺弹窗：与结算页同一格式——关卡序号 + 逐字掉落的大字 + 数据卡片；进入下一关 / 退出
   function showClearDialog(isFinal) {
     var ui = global.UI;
     var level = G.levelIndex + 1;
@@ -496,22 +506,23 @@
     var wrap = document.createElement('div');
     wrap.className = 'congrats';
 
-    var badge = document.createElement('div');
-    badge.className = 'congrats-badge';
-    badge.textContent = '✓';
-    wrap.appendChild(badge);
+    var status = document.createElement('div');
+    status.className = 'congrats-status';
+    status.textContent = '第' + numToCn(level) + '关';
+    wrap.appendChild(status);
 
+    // 大字结论：逐字从上方掉落，节奏与结算页一致，仅颜色换成本局的通关绿
     var title = document.createElement('div');
-    title.className = 'congrats-title';
-    title.textContent = '恭喜通关！';
+    title.className = 'congrats-verdict';
+    var word = isFinal ? '全部通关' : '通关';
+    for (var i = 0; i < word.length; i++) {
+      var ch = document.createElement('span');
+      ch.className = 'drop-char';
+      ch.textContent = word.charAt(i);
+      ch.style.setProperty('--i', i);
+      title.appendChild(ch);
+    }
     wrap.appendChild(title);
-
-    var sub = document.createElement('div');
-    sub.className = 'congrats-sub';
-    sub.textContent = isFinal
-      ? '全部 ' + G.levels.length + ' 关已通关'
-      : '第 ' + level + ' 关已通关';
-    wrap.appendChild(sub);
 
     var scores = document.createElement('div');
     scores.className = 'congrats-score';

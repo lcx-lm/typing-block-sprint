@@ -426,6 +426,8 @@ body[data-state="RESULT"] .user-strip{display:none}
 @media (max-width:560px){
   .result-verdict{font-size:42px;letter-spacing:.1em}
   .rank-line-delta{font-size:24px}
+  .congrats-verdict{font-size:42px}
+  .congrats-score{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
 /* ---------------- 红闪 / Toast / 弹窗 ---------------- */
@@ -893,32 +895,26 @@ body[data-state="RESULT"] .user-strip{display:none}
 [data-theme="light"] .result-rank.up{border-color:rgba(15,143,127,.35)}
 [data-theme="light"] .result-rank.down{border-color:rgba(217,69,95,.35)}
 
-/* ---------------- 通关祝贺 ---------------- */
+/* ---------------- 通关祝贺（与结算页同一格式，仅颜色不同） ---------------- */
 .congrats{text-align:center}
-.congrats-badge{
-  width:64px;height:64px;margin:4px auto 12px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 30% 25%,#7ff3e2,var(--acc2) 72%);
-  color:#041a16;font-size:30px;font-weight:900;
-  box-shadow:0 0 0 8px rgba(94,234,212,.12),0 18px 40px -18px rgba(94,234,212,.8);
-  animation:congrats-pop .45s cubic-bezier(.2,1.5,.4,1) both;
+/* 让大字从卡片上方掉进来时不至于被滚动容器裁掉 */
+.modal-card:has(.congrats){overflow:visible}
+.congrats-status{margin-top:2px;font-size:12.5px;font-weight:700;letter-spacing:.14em;color:var(--dim2)}
+.congrats-verdict{
+  display:flex;justify-content:center;margin-top:8px;
+  font-size:52px;font-weight:900;line-height:1.15;color:var(--acc);
+  text-shadow:0 0 26px rgba(94,234,212,.35);
 }
-.congrats-title{font-size:20px;font-weight:900;letter-spacing:.08em;color:var(--gold)}
-.congrats-sub{font-size:12.5px;color:var(--dim);margin-top:6px}
 .congrats-score{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
-  margin:16px 0 2px;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+  margin:18px 0 2px;
 }
 .congrats-score div{
-  min-width:104px;padding:10px 14px;border-radius:12px;
+  min-width:0;padding:10px 8px;border-radius:12px;
   background:var(--panel2);border:1px solid var(--line);
 }
-.congrats-score span{display:block;font-size:10.5px;letter-spacing:.12em;color:var(--dim2)}
-.congrats-score b{font-size:20px;font-variant-numeric:tabular-nums}
-@keyframes congrats-pop{
-  0%{transform:scale(.4);opacity:0}
-  100%{transform:scale(1);opacity:1}
-}
+.congrats-score span{display:block;font-size:10px;letter-spacing:.1em;color:var(--dim2)}
+.congrats-score b{font-size:18px;font-variant-numeric:tabular-nums;color:var(--acc)}
 
 /* 礼炮彩带 */
 .confetti-layer{position:fixed;inset:0;z-index:210;pointer-events:none;overflow:hidden}
