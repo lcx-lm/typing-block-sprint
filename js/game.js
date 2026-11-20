@@ -113,7 +113,9 @@
     startLevel: 1,
     cleared: 0,
     transitioning: false,
-    failReason: ''
+    failReason: '',
+    // 从通关弹窗点「退出」：本关已经通过，结算时不能按「中途退出」扣分
+    quitCleared: false
   };
 
   /* ---------------- 音效（Web Audio 合成，无外部文件） ---------------- */
@@ -688,6 +690,7 @@
           onClick: function () {
             ui.closeModal();
             G.failReason = 'quit';
+            G.quitCleared = true;
             endGame();
           }
         },
@@ -1184,6 +1187,7 @@
     G.paused = false;
     G.transitioning = false;
     G.failReason = '';
+    G.quitCleared = false;
     G.cleared = 0;
 
     var startIdx;
@@ -1343,6 +1347,7 @@
       startLevel: G.startLevel,
       cleared: G.cleared,
       win: G.failReason === 'win',
+      quitCleared: !!G.quitCleared,
       failReason: G.failReason
     };
 

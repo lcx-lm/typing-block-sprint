@@ -663,6 +663,13 @@
       return { delta: -10, result: 'lose' };
     }
 
+    // 主动退出且本关已消除过单词：视为本关没有通过，直接按失败扣分。
+    // 不把本局前面已通过的关卡折算成 +5/+20 加分，否则「刚打两三个词没达标就退出」也能涨分。
+    // 从通关弹窗点「退出」时本关已经通过（quitCleared），仍按正常通关结算。
+    if (stats.failReason === 'quit' && !stats.quitCleared) {
+      return { delta: -10, result: 'lose', bonus: 0 };
+    }
+
     // stats.cleared 是「已通关到第几关」的绝对关卡号，
     // 从中途关卡开始时需要换算成本局真正通过的关数，否则会少打多给分。
     var runCleared = stats.cleared
@@ -1507,7 +1514,7 @@
       if (preview.delta < 0) {
         lines.push('现在退出将扣除 <b>' + (-preview.delta) + '</b> 积分。');
       } else if (preview.delta > 0) {
-        lines.push('现在退出仍按已通过关卡结算，获得 <b>+' + preview.delta + '</b> 积分。');
+        lines.push('现在退出仍可获得 <b>+' + preview.delta + '</b> 积分。');
       } else {
         lines.push('现在退出不扣积分。');
       }
