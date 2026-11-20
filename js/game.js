@@ -251,6 +251,16 @@
     return owner === 'ai' ? laneAiEl : lanePlayerEl;
   }
 
+  // 错词复习：错词越少出块越慢。
+  // 只有 1~3 个错词时仍按正常频率出块，会瞬间铺满同几个词，
+  // 既重复又压迫。这里按错词数量放大出块间隔，6 个及以上恢复正常。
+  function reviewSpawnScale() {
+    var n = G.reviewPool.length;
+    if (!n && G.levels[0]) n = G.levels[0].pool.length;
+    if (!n || n >= 6) return 1;
+    return Math.min(3, 6 / n);
+  }
+
   function spawnBlock(owner) {
     owner = owner === 'ai' ? 'ai' : 'player';
 
@@ -277,7 +287,9 @@
 
     if (!avail) {
       avail = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
-      if (!avail.length) avail = filtered;
+      // 词池里的词都已在屏上时，这一轮不出块。
+      // 避免错词复习只有 1~3 个词时同屏出现两个相同单词。
+      if (!avail.length) return;
     }
 
     var item = avail[Math.floor(Math.random() * avail.length)];
@@ -918,6 +930,7 @@
       G.spawnAcc += dt * 1000;
       var gap = DIFFS[G.diffKey].spawnInterval;
       if (G.mode === 'versus') gap *= VERSE_PLAYER_SPAWN_SCALE;
+      if (G.mode === 'review') gap *= reviewSpawnScale();
       if (G.spawnAcc >= gap) {
         G.spawnAcc -= gap;
         spawnBlock('player');
@@ -1088,6 +1101,15 @@
     if (G.state === 'PLAYING' && !G.paused) pause();
   }
 
+  // 主动结束本局（暂停弹层里的「退出本局」）。
+  // 单机等模式按当前进度结算；AI 对战退出视为认输。
+  function quit() {
+    if (G.state !== 'PLAYING') return;
+    G.failReason = 'quit';
+    if (G.mode === 'versus') G.versusWinner = 'ai';
+    endGame();
+  }
+
   function endGame() {
     if (G.state !== 'PLAYING') return;
 
@@ -1180,6 +1202,7 @@
     pause: pause,
     resume: resume,
     autoPause: autoPause,
+    quit: quit,
 
     setSound: function (on) { soundOn = !!on; },
     isSoundOn: function () { return soundOn; },

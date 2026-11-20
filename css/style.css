@@ -309,6 +309,7 @@ body[data-state="RESULT"] .user-strip{display:none}
 .pause-card{text-align:center}
 .pause-title{font-size:26px;font-weight:900;letter-spacing:.14em}
 .pause-note{font-size:12px;color:var(--dim);margin:8px 0 18px}
+.pause-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
 /* ---------------- RESULT ---------------- */
 #screen-result{justify-content:center}

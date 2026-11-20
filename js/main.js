@@ -763,11 +763,13 @@
     var winView;
     if (mode === 'review') {
       status.textContent = '错词复习 · 60 秒打掉 ' + stats.wordsCleared + ' 个错词' +
-        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
+        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '') +
+        (stats.failReason === 'quit' ? ' · 主动退出' : '');
       winView = stats.failReason !== 'lives';
     } else if (mode === 'sprint') {
       status.textContent = '限时冲刺 · 60 秒得分 ' + stats.score +
-        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '');
+        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '') +
+        (stats.failReason === 'quit' ? ' · 主动退出' : '');
       winView = outcome.delta > 0;
     } else if (mode === 'versus') {
       var vWinner = stats.versusWinner ||
@@ -780,6 +782,8 @@
         why = 'AI 爱心碎完';
       } else if (stats.failReason === 'lives') {
         why = '你的爱心碎完';
+      } else if (stats.failReason === 'quit') {
+        why = '你退出了本局';
       } else {
         why = '时间到，按比分判定';
       }
@@ -954,7 +958,7 @@
           '<li><b>单机闯关</b>：逐关解锁，每关 50 秒，达到目标分过关</li>' +
           '<li><b>限时冲刺</b>：整库词池单局 60 秒，不设关卡，冲击最高分</li>' +
           '<li><b>AI 对战</b>：左右双跑道各 60 秒。AI 会读词、逐字输入、偶尔打错，也会小概率走神整词漏看；任一方 3 颗爱心碎完即判负，一方分数占比达到 <b>70%</b> 并保持 <b>3</b> 秒可压制获胜，否则时间到按比分判定</li>' +
-          '<li><b>错词复习</b>：从错词本首页点击「复习错词」，用当前词库的错词打一局 60 秒，不参与排名与段位积分</li>' +
+          '<li><b>错词复习</b>：从错词本首页点击「复习错词」，用当前词库的错词打一局 60 秒，不参与排名与段位积分；错词越少出块越慢，同屏不会出现重复单词</li>' +
         '</ul>' +
         '<p><b>成绩趋势</b></p>' +
         '<p>首页「最近表现」记录最近 20 局得分，并画出最近 10 局的走势，可用来观察自己是否在进步。</p>' +
@@ -964,7 +968,7 @@
         '<ul>' +
           '<li><b>字母 / 数字键</b>：逐字母输入当前单词</li>' +
           '<li><b>Backspace</b>：清空当前输入，不扣爱心</li>' +
-          '<li><b>Esc</b>：暂停 / 继续；切换到其他窗口会自动暂停</li>' +
+          '<li><b>Esc</b>：暂停 / 继续；切换到其他窗口会自动暂停；暂停中可点「退出本局」立即结算</li>' +
         '</ul>' +
         '<p>请使用<b>英文输入法</b>。检测到中文输入法组合输入时会暂停判定并给出提示。</p>',
       actions: [{ label: '知道了', primary: true, onClick: function () { UI.closeModal(); } }]
@@ -1182,6 +1186,9 @@
     });
     document.getElementById('resumeBtn').addEventListener('click', function () {
       Game.resume();
+    });
+    document.getElementById('quitGameBtn').addEventListener('click', function () {
+      Game.quit();
     });
 
     // 结算页
