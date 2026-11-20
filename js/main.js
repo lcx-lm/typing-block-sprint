@@ -643,8 +643,9 @@
 
   /* ---------------- 排位积分 ---------------- */
   function calcRankOutcome(stats, mode) {
-    // 开局后一个单词都没消除就退出：不扣分，也不计胜负
-    if (stats.failReason === 'quit' && !stats.wordsCleared) {
+    // 刚进入一关、本关一个单词都没消除就退出：不扣分，也不计胜负。
+    // 用 levelWords 而不是 wordsCleared，避免「前几关打了很多词，刚进新关卡就退出」被误扣。
+    if (stats.failReason === 'quit' && !stats.levelWords) {
       return { delta: 0, result: 'none', bonus: 0 };
     }
 
@@ -1490,9 +1491,14 @@
         versusWinner: info.mode === 'versus' ? 'ai' : info.versusWinner,
         aiScore: info.aiScore,
         wordsCleared: info.wordsCleared,
+        levelWords: info.levelWords,
         failReason: 'quit'
       }, info.mode);
-      var lines = ['目前已消除 <b>' + info.score + '</b> 分。'];
+      // 单机闯关显示「本关」得分，冲刺与对战没有关卡概念，显示整局得分
+      var shownScore = info.mode === 'solo' ? info.levelScore : info.score;
+      var lines = [info.mode === 'solo'
+        ? '本关目前已得 <b>' + shownScore + '</b> 分。'
+        : '目前已得 <b>' + shownScore + '</b> 分。'];
       if (info.mode === 'solo') {
         lines.push(info.remainingWords > 0
           ? '再消除约 <b>' + info.remainingWords + '</b> 个单词即可通过本关。'
@@ -1505,10 +1511,9 @@
       } else {
         lines.push('现在退出不扣积分。');
       }
-      lines.push('确定退出本局吗？');
-      UI.confirm('退出本局', lines.join('<br>'), function () {
+      UI.confirm('是否退出？', lines.join('<br>'), function () {
         Game.quit();
-      });
+      }, { titleCenter: true });
     });
 
     // 结算页

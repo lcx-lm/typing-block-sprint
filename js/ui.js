@@ -473,7 +473,7 @@
 
       if (opts.title) {
         var title = document.createElement('div');
-        title.className = 'modal-title';
+        title.className = 'modal-title' + (opts.titleCenter ? ' is-center' : '');
         title.textContent = opts.title;
         card.appendChild(title);
       }
@@ -563,9 +563,10 @@
       }, 2600);
     },
 
-    confirm: function (title, text, onOk) {
+    confirm: function (title, text, onOk, opts) {
       this.openModal({
         title: title,
+        titleCenter: !!(opts && opts.titleCenter),
         content: '<p>' + text + '</p>',
         actions: [
           { label: '取消', onClick: function () { UI.closeModal(); } },
