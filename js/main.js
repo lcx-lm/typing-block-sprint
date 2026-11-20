@@ -956,9 +956,8 @@
         (stats.failReason === 'quit' ? ' · 主动退出' : '');
       winView = stats.failReason !== 'lives';
     } else if (mode === 'sprint') {
-      status.textContent = '限时冲刺 · 60 秒得分 ' + stats.score +
-        (stats.failReason === 'lives' ? ' · 爱心提前耗尽' : '') +
-        (stats.failReason === 'quit' ? ' · 主动退出' : '');
+      status.textContent = stats.failReason === 'lives' ? '爱心提前耗尽'
+        : (stats.failReason === 'quit' ? '主动退出' : '时间到');
       winView = outcome.delta > 0;
     } else if (mode === 'versus') {
       vsWinner = stats.versusWinner ||
