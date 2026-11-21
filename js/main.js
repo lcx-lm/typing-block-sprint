@@ -1095,7 +1095,7 @@
 
     // 新纪录徽章：只有真正刷新最高分才显示，失败局不挂，避免「新纪录」和「失败」同时出现
     var recBadge = document.getElementById('resNew');
-    var recOk = mode === 'sprint' || (mode === 'versus' && vsWinner === 'player');
+    var recOk = (mode === 'sprint' && !sprintLose) || (mode === 'versus' && vsWinner === 'player');
     recBadge.hidden = !(isNewRecord && !isReview && recOk);
     document.getElementById('resRecordRow').hidden = recBadge.hidden;
 
