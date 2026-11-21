@@ -212,12 +212,18 @@
       // 把词库均匀切分到每一关，避免关卡配置写死
       var from = Math.floor(i * words.length / total);
       var to = Math.max(from + 1, Math.floor((i + 1) * words.length / total));
-      var pool = words.slice(from, to);
+      var own = words.slice(from, to);
+      // 出块词池向左右各扩一关（首尾关少一侧），降低同一关内的重复感；
+      // 目标分只用本关自身词池计算，保持每关难度不变
+      var poolFrom = Math.floor(Math.max(0, i - 1) * words.length / total);
+      var poolTo = Math.max(poolFrom + 1,
+        Math.floor(Math.min(total, i + 2) * words.length / total));
+      var pool = words.slice(poolFrom, poolTo);
 
       // 目标分 = 本关平均词长带来的单词语收益 × 目标词数（含连击加成）
       var ratio = total > 1 ? i / (total - 1) : 0;
       var needWords = Math.round(goal.from + (goal.to - goal.from) * ratio);
-      var perWord = avgWordLength(pool) * 10 * coef;
+      var perWord = avgWordLength(own) * 10 * coef;
 
       list.push({
         index: i + 1,
@@ -340,19 +346,9 @@
     // 尽量避免同屏重复单词（两条跑道一起算）
     var onScreen = G.blocks.map(function (b) { return b.word; });
 
-    var avail = null;
-    // 错词本只影响玩家跑道
-    if (owner === 'player') {
-      var review = G.reviewPool.filter(function (w) {
-        return w && w.word && w.word.length <= maxLen && onScreen.indexOf(w.word) === -1;
-      });
-      if (review.length && Math.random() < 0.35) avail = review;
-    }
-
+    // 正常对局只用当前关卡的词池；错词统一走首页「复习错词」入口，避免打乱闯关节奏
     var item = null;
-    if (avail) {
-      item = avail[Math.floor(Math.random() * avail.length)];
-    } else if (G.mode === 'review') {
+    if (G.mode === 'review') {
       // 复习词池很小，保留随机取词与同屏去重；词全在屏上时本轮不出块
       var left = filtered.filter(function (w) { return onScreen.indexOf(w.word) === -1; });
       if (!left.length) return;

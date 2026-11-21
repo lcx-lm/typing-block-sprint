@@ -198,8 +198,8 @@
 
     if (note) {
       note.textContent = set
-        ? '当前词库：' + set.name + ' · 共 ' + list.length + ' 个错词，对局中优先出现'
-        : '打错的单词会自动收集，对局中优先出现';
+        ? '当前词库：' + set.name + ' · 共 ' + list.length + ' 个错词，可点「复习错词」专项练习'
+        : '打错的单词会自动收集，可用「复习错词」专项练习';
     }
 
     var reviewBtn = document.getElementById('reviewWrongBtn');
