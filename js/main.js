@@ -920,8 +920,9 @@
       ST.setJSON('history', DATA.history);
     }
 
-    // 主动退出：积分与成绩照常结算入账，但不展示结算页，直接回到首页
-    if (stats.failReason === 'quit') {
+    // 主动退出：会扣分时进入失败结算页，展示积分倒扣与进度条倒退；
+    // 不扣分（一个词都没消）或仍加分（如冲刺 400 分以上退出、通关弹窗退出）时直接回首页
+    if (stats.failReason === 'quit' && !(outcome.delta < 0)) {
       Game.stop();
       refreshHome();
       UI.showScreen('HOME');
@@ -1005,7 +1006,7 @@
       } else {
         status.textContent = '第' + numToCn(stats.levelIndex) + '关';
       }
-      winView = !!stats.win || (stats.failReason === 'quit' && stats.cleared > 0);
+      winView = !!stats.win;
     }
     status.classList.toggle('is-win', winView);
 
@@ -1015,23 +1016,24 @@
       bigText = stats.failReason === 'lives' ? '复习结束' : '复习完成';
       bigCls = 'is-mid';
     } else if (mode === 'sprint') {
-      // 冲刺不再把「未破纪录」当成失败，统一显示挑战完成；破纪录只用金色徽章提示
-      bigText = '挑战完成';
-      bigCls = 'is-win';
+      // 冲刺统一「挑战完成」；只有主动退出且导致扣分时按失败展示
+      var sprintLose = stats.failReason === 'quit' && outcome.delta < 0;
+      bigText = sprintLose ? '失败' : '挑战完成';
+      bigCls = sprintLose ? 'is-lose' : 'is-win';
     } else if (mode === 'versus') {
       bigText = cmp;
       bigCls = cmp === '胜利' ? 'is-win' : (cmp === '失败' ? 'is-lose' : 'is-mid');
     } else {
       if (stats.win) { bigText = '全部通关'; bigCls = 'is-win'; }
-      else if (stats.failReason === 'quit') { bigText = '已退出'; bigCls = 'is-mid'; }
+      else if (stats.failReason === 'quit') { bigText = '失败'; bigCls = 'is-lose'; }
       else if (stats.failReason === 'time') { bigText = '时间到'; bigCls = winView ? 'is-win' : 'is-lose'; }
       else { bigText = '失败'; bigCls = 'is-lose'; }
     }
     var dropMs = renderVerdict(verdict, bigText, bigCls);
 
-    // 单机因爱心碎完失败时，把「第一关」移到「失败」上方并居中；其它情况放回大字下方
+    // 单机失败（含中途退出扣分）时，把「第 N 关」移到大字上方并居中；其它情况放回大字下方
     // AI 对战的大字下方先是比分，状态行要排在比分之后
-    if (mode === 'solo' && !stats.win && stats.failReason !== 'quit' && stats.failReason !== 'time') {
+    if (mode === 'solo' && !winView && stats.failReason !== 'time') {
       verdict.parentNode.insertBefore(status, verdict);
       status.classList.add('is-above');
     } else {
