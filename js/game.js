@@ -40,14 +40,12 @@
   var VERSE_ACTIVE_SCORE = 400;
 
   /* ---------------- 生命与数值 ----------------
-     生命为 3 颗爱心：方块触底碎掉 1 颗，碎完本局结束。
-     打错字母只清空连击，不扣爱心。
+     3 颗爱心：方块触底碎 1 颗，碎完本局结束；打错字母只清空连击，不扣爱心。
      ------------------------------------------------ */
   var LIVES_MAX = 3;
 
   /* ---------------- 关卡参数 ----------------
-     关卡数不写死：由词库词数自动计算（6 ~ 50 关）。
-     每关限时冲击目标分，过关后爱心重置并进入下一关。
+     关卡数由词库词数自动计算（6 ~ 50 关）；每关限时冲击目标分，过关后爱心重置。
      ------------------------------------------------ */
   var WORDS_PER_LEVEL = 8;
   var MIN_LEVELS = 6;
@@ -55,8 +53,7 @@
   var LEVEL_TIME = 50;   // 每关秒数
   var MODE_TIME = 60;    // 限时冲刺 / AI 对战单局秒数
 
-  // 每关需要稳定打掉的单词数：随关卡递增
-  // 按实测校准：四级普通第 1 关约 6 词（目标约 490 分），最后一关约 11 词
+  // 每关需打掉的词数随关卡递增；按实测校准：四级普通第 1 关约 6 词（目标约 490 分），最后一关约 11 词
   var WORD_GOALS = {
     easy:   { from: 5,  to: 9 },
     normal: { from: 6,  to: 11 },
@@ -261,9 +258,8 @@
     return owner === 'ai' ? laneAiEl : lanePlayerEl;
   }
 
-  // 错词复习：错词越少出块越慢。
-  // 只有 1~3 个错词时仍按正常频率出块，会瞬间铺满同几个词，
-  // 既重复又压迫。这里按错词数量放大出块间隔，6 个及以上恢复正常。
+  // 错词复习：错词越少出块越慢。只有 1~3 个错词时按正常频率出块会瞬间铺满同几个词，
+  // 既重复又压迫，故按错词数量放大出块间隔，6 个及以上恢复正常。
   function reviewSpawnScale() {
     var n = G.reviewPool.length;
     if (!n && G.levels[0]) n = G.levels[0].pool.length;
@@ -272,9 +268,8 @@
   }
 
   /* ---------------- 洗牌袋 ----------------
-     出块不再每次整池随机，而是先把当前词池按难度长度过滤、打乱，
-     再按顺序逐个取出；一轮抽完后重新洗牌。
-     这样在抽完一整轮之前不会重复遇到同一个词，同时顺序仍是随机的。
+     出块不再整池随机：词池按难度长度过滤后打乱，按顺序逐个取出，一轮抽完再洗牌，
+     因此抽完一整轮前不会重复遇到同一个词，顺序仍是随机的。
      玩家与 AI 共用同一个袋子，两条跑道也不会刷出同一个词。
      ------------------------------------------------ */
   function shuffleInPlace(arr) {
@@ -325,7 +320,6 @@
           return item;
         }
       }
-      // 本轮剩下的词都已在屏上：换一轮新牌继续找（大词池基本走不到这里）
       refillBag(pool, maxLen);
     }
     return null;
@@ -364,7 +358,6 @@
       if (!left.length) return;
       item = left[Math.floor(Math.random() * left.length)];
     } else {
-      // 洗牌袋抽词：抽完一整轮之前不会重复，抽完自动重新洗牌
       item = takeFromBag(pool, maxLen, onScreen);
       if (!item) return;
     }
@@ -431,7 +424,6 @@
       b.y += speed * dt;
       b.el.style.top = b.y + 'px';
 
-      // 临近底部给出红色警示
       var near = (b.y + b.h) > (areaH - 90);
       b.el.classList.toggle('near', near);
 
@@ -554,7 +546,6 @@
     renderHUD();
   }
 
-  // 通关礼炮音效：低频“砰”+ 上行琶音
   function playLevelClearSound() {
     beep(160, 0.12, 'square', 0.07);
     setTimeout(function () { beep(110, 0.16, 'sine', 0.08); }, 40);
@@ -574,7 +565,7 @@
     return String(v);
   }
 
-  // 通关祝贺弹窗：与结算页同一格式——关卡序号 + 逐字掉落的大字 + 数据卡片；进入下一关 / 退出
+  // 通关弹窗：格式与结算页一致（序号 / 逐字掉落的大字 / 数据卡片），可进入下一关或退出
   function showClearDialog(isFinal) {
     var ui = global.UI;
     var level = G.levelIndex + 1;
@@ -875,7 +866,6 @@
     }
     ai.stunReason = '';
 
-    // 目标被消除或掉落后重新选择
     if (ai.target && (ai.target.dead || G.blocks.indexOf(ai.target) === -1)) {
       if (ai.target.el) ai.target.el.classList.remove('is-typo');
       ai.target = null;
@@ -928,16 +918,13 @@
       return;
     }
 
-    // 读词 / 打错停顿
     if (now < ai.reactUntil) {
       ai.state = now < ai.mistakeUntil ? '打错了' : '读词中';
       return;
     }
 
-    // 停顿结束，恢复正常并继续逐字输入
     if (ai.target.el) ai.target.el.classList.remove('is-typo');
 
-    // 按每秒字符数逐字推进
     var target = ai.target;
     ai.charAcc += dt * DIFFS[G.diffKey].aiCps;
     while (ai.charAcc >= 1 && ai.typed.length < target.word.length) {
@@ -995,7 +982,6 @@
     var ui = global.UI;
     if (ui && ui.els && ui.els.modalRoot && ui.els.modalRoot.children.length) return;
 
-    // 暂停状态下只响应 Esc 继续
     if (G.paused) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -1021,7 +1007,6 @@
       return;
     }
 
-    // 组合键不参与输入判定
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     // 输入法拼音上屏过程中不判定，避免误吞键
@@ -1088,7 +1073,6 @@
     if (!G.paused && !G.transitioning) {
       G.elapsedMs += dt * 1000;
 
-      // 限时：时间到即本局结束
       G.levelTime -= dt;
       if (G.levelTime <= 0) {
         G.levelTime = 0;
@@ -1108,7 +1092,6 @@
         spawnBlock('player');
       }
 
-      // AI 跑道独立出块
       if (G.mode === 'versus') {
         G.ai.spawnAcc += dt * 1000;
         var aiGap = DIFFS[G.diffKey].aiSpawnInterval;
@@ -1122,7 +1105,6 @@
       if (G.state !== 'PLAYING') return;
 
       if (G.mode === 'versus') {
-        // AI 拟人打字 + 拔河条压制判定
         updateAI(dt, G.elapsedMs / 1000);
         if (G.state !== 'PLAYING') return;
         updateVersusBar(dt);
@@ -1141,7 +1123,6 @@
     if (!DIFFS[diffKey]) diffKey = 'normal';
     if (mode !== 'sprint' && mode !== 'versus' && mode !== 'review') mode = 'solo';
 
-    // 先彻底清理上一局残留
     stopLoop();
     cleanupBlocks();
 
@@ -1257,7 +1238,7 @@
   }
 
   function pause() {
-    // 过关切换的 1.2 秒内不暂停，避免切关计时器被打断
+    // 过关切换期间不暂停，避免打断切关流程
     if (G.state !== 'PLAYING' || G.paused || G.transitioning) return;
     G.paused = true;
     document.body.dataset.state = 'PAUSED';
@@ -1273,7 +1254,6 @@
     G.last = global.performance.now();
   }
 
-  // 失焦 / 页面隐藏时自动暂停
   function autoPause() {
     if (G.state === 'PLAYING' && !G.paused) pause();
   }
@@ -1305,8 +1285,7 @@
     };
   }
 
-  // 主动结束本局（暂停弹层里的「退出本局」）。
-  // 单机等模式按当前进度结算；AI 对战退出视为认输。
+  // 主动结束本局（暂停弹层「退出本局」）：单机按当前进度结算，AI 对战退出视为认输。
   function quit() {
     if (G.state !== 'PLAYING') return;
     G.failReason = 'quit';
@@ -1355,7 +1334,6 @@
     G.input = '';
     renderHUD();
 
-    // 结算提示音：短促的三音下行
     beep(523, 0.1, 'triangle', 0.05);
     setTimeout(function () { beep(392, 0.12, 'triangle', 0.05); }, 110);
     setTimeout(function () { beep(294, 0.18, 'triangle', 0.05); }, 230);
@@ -1398,7 +1376,6 @@
         G.composing = false;
       });
 
-      // 切窗自动暂停
       global.addEventListener('blur', autoPause);
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) autoPause();

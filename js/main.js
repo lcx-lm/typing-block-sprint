@@ -202,7 +202,6 @@
         : '打错的单词会自动收集，对局中优先出现';
     }
 
-    // 复习入口按钮：显示当前词库的错词数量，空时给出提示
     var reviewBtn = document.getElementById('reviewWrongBtn');
     if (reviewBtn) {
       reviewBtn.textContent = list.length ? '复习错词（' + list.length + '）' : '复习错词';
@@ -306,7 +305,6 @@
     ONBOARD.els.guide.hidden = true;
   }
 
-  // 进入首页前的统一收尾
   function enterHome() {
     hideGuideLayer();
     refreshHome();
@@ -347,7 +345,6 @@
     var e = ONBOARD.els;
     var v = (e.welcomeInput.value || '').trim().slice(0, 12);
 
-    // 空字符串与纯空格都在这里被拦下
     if (!v) {
       e.welcomeErr.hidden = false;
       e.welcomeInput.focus();
@@ -770,17 +767,14 @@
     void fill.offsetWidth;
     fill.style.transition = '';
 
-    // 1) 大字结论落定后，先弹出本局加减分
     timers.push(setTimeout(function () {
       deltaEl.classList.add('is-reveal');
     }, t0));
-    // 2) 稍作停顿，进度条从结算前位置开始前进 / 后退，数字同步滚动
     timers.push(setTimeout(function () {
       fill.style.width = pctAfter + '%';
       tweenLabel(label, a.before, a.after, a.denom, 1200);
       tweenLabel(totalEl, a.before, a.after, null, 1200);
     }, t0 + 700));
-    // 3) 进度条走完后再揭示段位名与下一段位提示
     timers.push(setTimeout(function () {
       rankName.classList.add('is-reveal');
       note.classList.add('is-reveal');
@@ -934,7 +928,6 @@
       return;
     }
 
-    // 结算页数据
     document.getElementById('resScore').textContent = stats.score;
     document.getElementById('resAcc').textContent = stats.accuracy + '%';
     document.getElementById('resWpm').textContent = stats.wpm + ' 词/分';
@@ -1016,7 +1009,6 @@
     }
     status.classList.toggle('is-win', winView);
 
-    // 大字结论：胜利 / 失败 / 通关 等，放在结算页中间
     var verdict = document.getElementById('resVerdict');
     var bigText, bigCls;
     if (mode === 'review') {
@@ -1048,7 +1040,6 @@
       status.classList.remove('is-above');
     }
 
-    // AI 对战：放大双方比分，并直接说明领先 / 落后多少
     var vsScoreEl = document.getElementById('resVsScore');
     vsScoreEl.hidden = mode !== 'versus';
     if (mode === 'versus') {
@@ -1097,14 +1088,12 @@
       });
     }
 
-    // 新纪录徽章：只有真正刷新最高分才显示，不刷新就不提示，也不出现「未破纪录」
-    // 失败局不挂徽章，避免「新纪录」和「失败」同时出现
+    // 新纪录徽章：只有真正刷新最高分才显示，失败局不挂，避免「新纪录」和「失败」同时出现
     var recBadge = document.getElementById('resNew');
     var recOk = mode === 'sprint' || (mode === 'versus' && vsWinner === 'player');
     recBadge.hidden = !(isNewRecord && !isReview && recOk);
     document.getElementById('resRecordRow').hidden = recBadge.hidden;
 
-    // 本局需要加强的单词：去重后最多 10 个
     var wrap = document.getElementById('resWrong');
     wrap.innerHTML = '';
     var seen = {};
@@ -1294,7 +1283,6 @@
   function openSettings() {
     var wrap = document.createElement('div');
 
-    // 音效开关
     var row = document.createElement('div');
     row.className = 'switch-row';
 
@@ -1323,7 +1311,6 @@
     row.appendChild(sw);
     wrap.appendChild(row);
 
-    // 主题开关：默认亮色，开启后切换为暗色
     var themeRow = document.createElement('div');
     themeRow.className = 'switch-row';
 
@@ -1365,7 +1352,6 @@
     });
     wrap.appendChild(btnGuide);
 
-    // 重置所有数据
     var btnReset = document.createElement('button');
     btnReset.className = 'btn ghost small';
     btnReset.textContent = '重置所有数据';
@@ -1579,7 +1565,6 @@
       UI.showScreen('HOME');
       maybeAutoHelp();
     } else {
-      // 首次进入：WELCOME → GUIDE → HOME
       startOnboarding();
     }
   }
