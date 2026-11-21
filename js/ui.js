@@ -571,6 +571,7 @@
         title: title,
         titleCenter: !!(opts && opts.titleCenter),
         bodyCenter: !!(opts && opts.bodyCenter),
+        centerActions: !!(opts && opts.centerActions),
         content: '<p>' + text + '</p>',
         actions: [
           { label: '取消', onClick: function () { UI.closeModal(); } },

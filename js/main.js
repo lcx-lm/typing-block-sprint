@@ -1506,7 +1506,7 @@
       }
       UI.confirm('是否退出？', lines.join('<br>'), function () {
         Game.quit();
-      }, { titleCenter: true, bodyCenter: true });
+      }, { titleCenter: true, bodyCenter: true, centerActions: true });
     });
 
     // 结算页
