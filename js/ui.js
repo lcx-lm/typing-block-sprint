@@ -65,6 +65,7 @@
       e.modalRoot = document.getElementById('modalRoot');
 
       e.hudScore = document.getElementById('hudScore');
+      e.hudScoreItem = document.getElementById('hudScoreItem');
       e.hudBar = document.getElementById('hudBar');
       e.hudScoreLabel = document.getElementById('hudScoreLabel');
       e.hudLevel = document.getElementById('hudLevel');
@@ -72,7 +73,6 @@
       e.hudLevelItem = document.getElementById('hudLevelItem');
       e.hudTargetItem = document.getElementById('hudTargetItem');
       e.hudAiSide = document.getElementById('hudAiSide');
-      e.hudAiScoreVal = document.getElementById('hudAiScoreVal');
       e.hudAiComboVal = document.getElementById('hudAiComboVal');
       e.hudAiHearts = document.getElementById('hudAiHearts');
       e.hudAiInput = document.getElementById('hudAiInput');
@@ -144,8 +144,10 @@
       if (e.hudBar) e.hudBar.classList.toggle('is-versus', versus);
       e.hudScore.textContent = solo ? d.levelScore : d.score;
       if (e.hudScoreLabel) {
-        e.hudScoreLabel.textContent = solo ? '本关分数' : (versus ? '我的分数' : '分数');
+        e.hudScoreLabel.textContent = solo ? '本关分数' : '分数';
       }
+      // 对战里比分已经显示在拔河条两端，HUD 不再重复显示分数
+      if (e.hudScoreItem) e.hudScoreItem.hidden = versus;
       e.hudLevel.textContent = d.level + ' / ' + d.levelTotal;
       e.hudTarget.textContent = d.levelScore + ' / ' + d.levelTarget;
       e.hudTime.textContent = d.time + 's';
@@ -200,8 +202,7 @@
           typeof d.aiLives === 'number' ? d.aiLives : 3)));
         if (e.aiState) e.aiState.textContent = d.aiState || '等待';
 
-        // HUD 右侧 AI 信息组：分数、连击、爱心、状态
-        if (e.hudAiScoreVal) e.hudAiScoreVal.textContent = d.aiScore || 0;
+        // HUD 右侧 AI 信息组：连击、爱心、输入（比分见拔河条）
         var aiCombo = typeof d.aiCombo === 'number' ? d.aiCombo : 0;
         if (e.hudAiComboVal) {
           e.hudAiComboVal.textContent = aiCombo;

@@ -661,7 +661,7 @@ body[data-state="PLAYING"] #pauseBtn{display:flex}
   .app{padding:10px 12px 20px}
   .brand-sub{display:none}
   .brand-name{font-size:18px}
-  .hud{grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  .hud,.hud.is-versus{grid-template-columns:minmax(0,1fr) auto;gap:10px}
   .hud-item{min-width:52px}
   .hud-hp{min-width:72px}
   .hud-group-player{grid-column:1;justify-content:flex-start}
