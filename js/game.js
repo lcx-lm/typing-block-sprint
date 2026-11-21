@@ -975,6 +975,15 @@
     else G.versusWinner = 'draw';
   }
 
+  // 中文输入法：组词期间按键不算游戏输入，同时提醒玩家切换英文输入法（4 秒内只提示一次）
+  var lastImeHintAt = 0;
+  function hintIme() {
+    var now = Date.now();
+    if (now - lastImeHintAt < 4000) return;
+    lastImeHintAt = now;
+    if (global.UI && global.UI.toast) global.UI.toast('检测到中文输入法，请切换到英文输入法');
+  }
+
   function handleKeydown(e) {
     if (G.state !== 'PLAYING') return;
 
@@ -1009,8 +1018,11 @@
 
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    // 输入法拼音上屏过程中不判定，避免误吞键
-    if (G.composing) return;
+    // 输入法组词 / 上屏阶段：不判定，避免拼音被当成英文输入
+    if (G.composing || e.isComposing || e.keyCode === 229 || e.key === 'Process' || e.key === 'Unidentified') {
+      hintIme();
+      return;
+    }
 
     if (e.key.length !== 1) return;
     var ch = e.key.toLowerCase();
@@ -1368,9 +1380,7 @@
       // 中文输入法：上屏期间不判定，并给出提示
       document.addEventListener('compositionstart', function () {
         G.composing = true;
-        if (G.state === 'PLAYING' && !G.paused) {
-          global.UI.toast('请切换到英文输入法');
-        }
+        if (G.state === 'PLAYING' && !G.paused) hintIme();
       });
       document.addEventListener('compositionend', function () {
         G.composing = false;
