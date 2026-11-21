@@ -233,6 +233,8 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 .hud-group-player{grid-column:1}
 .hud-group-ai{grid-column:3}
+/* 右侧整组按剩余时间镜像：标签与数值都靠右对齐 */
+.hud-group-ai .hud-item{align-items:flex-end;text-align:right}
 .hud-group[hidden]{display:none}
 .hud-time{grid-column:2;align-items:center;text-align:center}
 .hud-hp{min-width:72px}
