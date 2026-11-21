@@ -1498,9 +1498,9 @@
           : '本关目标分已达成。');
       }
       if (preview.delta < 0) {
-        // 退出会按失败结算：单机与冲刺直接算失败，AI 对战算认输（同样判负）
+        // 退出会按失败结算：单机与冲刺算失败，AI 对战算认输（同样判负）
         lines.push(info.mode === 'versus'
-          ? '现在退出将算作 <b>失败</b>（认输），并扣除 <b>' + (-preview.delta) + '</b> 积分。'
+          ? '现在退出将算作 <b>认输</b>，并扣除 <b>' + (-preview.delta) + '</b> 积分。'
           : '现在退出将算作 <b>失败</b>，并扣除 <b>' + (-preview.delta) + '</b> 积分。');
       } else if (preview.delta > 0) {
         lines.push('现在退出不算失败，仍可获得 <b>+' + preview.delta + '</b> 积分。');
