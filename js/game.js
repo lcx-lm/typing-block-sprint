@@ -149,6 +149,113 @@
     osc.stop(t0 + dur + 0.03);
   }
 
+  /* ---------------- 背景音乐（Web Audio 合成芯片音乐，无外部文件） ---------------- */
+  var BGM_BPM = 116;
+  var BGM_STEP_DUR = 60 / BGM_BPM / 2;      // 116 BPM 的八分音符
+  var BGM_MASTER = 0.12;
+  var BGM_LEN = 32;                          // 4 小节 × 8 步的循环
+  // Am - F - C - G 四小节低音根音（MIDI 音高）
+  var BGM_ROOTS = [45, 41, 48, 43];
+  // 主旋律：每小节 8 个八分音符，0 为休止
+  var BGM_LEAD = [
+    69, 72, 76, 72, 69, 76, 72, 76,
+    65, 69, 72, 69, 65, 72, 69, 72,
+    76, 72, 67, 72, 76, 72, 67, 72,
+    74, 71, 67, 71, 74, 71, 67, 71
+  ];
+
+  var bgmOn = true;
+  var bgmTimer = null;
+  var bgmBus = null;
+  var bgmNext = 0;
+  var bgmStep = 0;
+
+  function midiToFreq(m) {
+    return 440 * Math.pow(2, (m - 69) / 12);
+  }
+
+  function bgmNote(t, freq, dur, type, vol) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain);
+    gain.connect(bgmBus);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+
+  function bgmKick(t) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.16);
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(gain);
+    gain.connect(bgmBus);
+    osc.start(t);
+    osc.stop(t + 0.24);
+  }
+
+  function bgmPlayStep(t, i) {
+    var bar = Math.floor(i / 8) % 4;
+    var beat = i % 8;
+    var root = BGM_ROOTS[bar];
+    // 低音：1、3 拍根音，2、4 拍高八度
+    if (beat === 0 || beat === 4) bgmNote(t, midiToFreq(root), 0.22, 'triangle', 0.3);
+    if (beat === 2 || beat === 6) bgmNote(t, midiToFreq(root + 12), 0.14, 'triangle', 0.18);
+    // 主旋律
+    var lead = BGM_LEAD[i];
+    if (lead) bgmNote(t, midiToFreq(lead), 0.16, 'square', 0.08);
+    // 节奏：底鼓 + 反拍踩镲
+    if (beat === 0 || beat === 4) bgmKick(t);
+    if (beat % 2 === 1) bgmNote(t, 7800, 0.035, 'square', 0.03);
+  }
+
+  function bgmTick() {
+    if (!bgmOn || !audioCtx || !bgmBus) return;
+    if (document.hidden) { bgmNext = 0; return; }
+    if (!bgmNext || bgmNext < audioCtx.currentTime) {
+      bgmNext = audioCtx.currentTime + 0.06;
+    }
+    // 提前 0.4 秒排程，避免定时器抖动造成卡顿
+    while (bgmNext < audioCtx.currentTime + 0.4) {
+      bgmPlayStep(bgmNext, bgmStep);
+      bgmStep = (bgmStep + 1) % BGM_LEN;
+      bgmNext += BGM_STEP_DUR;
+    }
+  }
+
+  function startBgm() {
+    if (!bgmOn) return;
+    var ac = getCtx();
+    if (!ac) return;
+    if (!bgmBus) {
+      bgmBus = ac.createGain();
+      bgmBus.gain.value = BGM_MASTER;
+      bgmBus.connect(ac.destination);
+    }
+    if (bgmTimer) return;
+    bgmNext = 0;
+    bgmStep = 0;
+    bgmTimer = setInterval(bgmTick, 120);
+    bgmTick();
+  }
+
+  function stopBgm() {
+    if (bgmTimer) {
+      clearInterval(bgmTimer);
+      bgmTimer = null;
+    }
+    bgmNext = 0;
+  }
+
+
   /* ---------------- 运行时计算 ---------------- */
   function calcAccuracy() {
     var total = G.correctChars + G.errorCount;
@@ -1400,6 +1507,21 @@
 
     setSound: function (on) { soundOn = !!on; },
     isSoundOn: function () { return soundOn; },
+    // 任意鼠标点击的轻提示音，跟随音效开关
+    playClick: function () { beep(880, 0.045, 'triangle', 0.035); },
+
+    setBgm: function (on) {
+      bgmOn = !!on;
+      if (!bgmOn) stopBgm();
+      else if (audioCtx) startBgm();
+    },
+    isBgmOn: function () { return bgmOn; },
+    // 浏览器要求首次用户交互后才能出声，这里统一解锁并起播
+    unlockAudio: function () {
+      var ac = getCtx();
+      if (ac && ac.state === 'suspended' && ac.resume) ac.resume();
+      if (bgmOn) startBgm();
+    },
 
     getConfig: function () {
       return { setKey: G.setKey, diffKey: G.diffKey };

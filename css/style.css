@@ -60,6 +60,7 @@ button{font:inherit;color:inherit}
 .user-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 body[data-state="SELECT"] .user-strip,
 body[data-state="PLAYING"] .user-strip,
+body[data-state="PAUSED"] .user-strip,
 body[data-state="RESULT"] .user-strip{display:none}
 .user-chip{
   display:inline-flex;align-items:baseline;gap:7px;line-height:1;
@@ -223,18 +224,20 @@ body[data-state="RESULT"] .user-strip{display:none}
 }
 /* AI 对战才有右半区，左右两列等宽，时间正好落在正中 */
 .hud.is-versus{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
-.hud-item{display:flex;flex-direction:column;gap:2px;min-width:56px}
+.hud-item{display:flex;flex-direction:column;gap:2px;min-width:56px;align-items:center;text-align:center}
 .hud-item span{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);white-space:nowrap}
 .hud-item b{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
 /* AI 对战：左半全是我方信息、右半全是 AI 信息，两组等宽等距铺开形成镜像 */
 .hud-group{
-  display:flex;align-items:flex-end;justify-content:space-between;
+  display:flex;align-items:flex-start;justify-content:space-between;
   gap:10px 14px;flex-wrap:wrap;min-width:0;
 }
 .hud-group-player{grid-column:1}
 .hud-group-ai{grid-column:3}
-/* 右侧整组按剩余时间镜像：标签与数值都靠右对齐 */
-.hud-group-ai .hud-item{align-items:flex-end;text-align:right}
+/* 单机 / 冲刺：每个指标等宽铺开，间隙一致，避免忽大忽小 */
+.hud:not(.is-versus) .hud-group-player{gap:10px 16px}
+.hud:not(.is-versus) .hud-group-player .hud-item{flex:1 1 0}
+.hud:not(.is-versus) .hud-input{max-width:none}
 .hud-group[hidden]{display:none}
 .hud-time{grid-column:2;align-items:center;text-align:center}
 .hud-hp{min-width:72px}
@@ -667,6 +670,9 @@ body[data-state="PLAYING"] #pauseBtn{display:flex}
   .hud-item{min-width:52px}
   .hud-hp{min-width:72px}
   .hud-group-player{grid-column:1;justify-content:flex-start}
+  /* 窄屏空间不足，指标回到按内容宽度排列，避免被等分成过窄的格子 */
+  .hud:not(.is-versus) .hud-group-player{gap:8px 10px}
+  .hud:not(.is-versus) .hud-group-player .hud-item{flex:0 1 auto}
   .hud-time{grid-column:2}
   /* 窄屏放不下左右分栏：AI 信息整组换到第二行，用分隔线区分 */
   .hud-group-ai{

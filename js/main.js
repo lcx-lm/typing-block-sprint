@@ -12,7 +12,7 @@
     nickname: '玩家',
     bestScore: 0,
     bestWpm: 0,
-    settings: { sound: true, theme: 'light' },
+    settings: { sound: true, bgm: true, theme: 'light' },
     helpSeen: false,
     guideSeen: false,
     levelProgress: {},
@@ -63,9 +63,11 @@
     DATA.bestScore = parseInt(ST.get('bestScore', '0'), 10) || 0;
     DATA.bestWpm = parseInt(ST.get('bestWpm', '0'), 10) || 0;
 
-    var settings = ST.getJSON('settings', { sound: true, theme: 'light' });
+    var settings = ST.getJSON('settings', { sound: true, bgm: true, theme: 'light' });
     DATA.settings = {
       sound: !settings || settings.sound !== false,
+      // 音效与背景音乐默认开启，仅当用户明确关闭过才为 false
+      bgm: !settings || settings.bgm !== false,
       theme: settings && settings.theme === 'dark' ? 'dark' : 'light'
     };
 
@@ -1293,7 +1295,7 @@
     k.className = 'k';
     k.textContent = '音效';
     var small = document.createElement('small');
-    small.textContent = '消除、出错、结算提示音';
+    small.textContent = '点击、消除、出错、结算提示音，默认开启';
     k.appendChild(small);
 
     var sw = document.createElement('button');
@@ -1313,6 +1315,34 @@
     row.appendChild(k);
     row.appendChild(sw);
     wrap.appendChild(row);
+
+    // 背景音乐：轻快循环伴奏，单独开关
+    var bgmRow = document.createElement('div');
+    bgmRow.className = 'switch-row';
+
+    var bgmKey = document.createElement('div');
+    bgmKey.className = 'k';
+    bgmKey.textContent = '背景音乐';
+    var bgmSmall = document.createElement('small');
+    bgmSmall.textContent = '轻快的循环伴奏，默认开启';
+    bgmKey.appendChild(bgmSmall);
+
+    var bgmSw = document.createElement('button');
+    bgmSw.className = 'switch' + (DATA.settings.bgm ? ' is-on' : '');
+    bgmSw.type = 'button';
+    bgmSw.setAttribute('aria-label', '背景音乐开关');
+    bgmSw.appendChild(document.createElement('i'));
+
+    bgmSw.addEventListener('click', function () {
+      DATA.settings.bgm = !DATA.settings.bgm;
+      bgmSw.classList.toggle('is-on', DATA.settings.bgm);
+      ST.setJSON('settings', DATA.settings);
+      Game.setBgm(DATA.settings.bgm);
+    });
+
+    bgmRow.appendChild(bgmKey);
+    bgmRow.appendChild(bgmSw);
+    wrap.appendChild(bgmRow);
 
     var themeRow = document.createElement('div');
     themeRow.className = 'switch-row';
@@ -1365,7 +1395,7 @@
         DATA.nickname = '玩家';
         DATA.bestScore = 0;
         DATA.bestWpm = 0;
-        DATA.settings = { sound: true, theme: 'light' };
+        DATA.settings = { sound: true, bgm: true, theme: 'light' };
         DATA.helpSeen = false;
         DATA.guideSeen = false;
         DATA.levelProgress = {};
@@ -1376,6 +1406,7 @@
         picked.level = 1;
         picked.mode = 'solo';
         Game.setSound(true);
+        Game.setBgm(true);
         UI.applyTheme('light');
         refreshHome();
         UI.closeModal();
@@ -1553,6 +1584,21 @@
     loadData();
     UI.applyTheme(DATA.settings.theme);
     Game.setSound(DATA.settings.sound);
+    Game.setBgm(DATA.settings.bgm);
+    // 浏览器策略要求先有用户交互才允许出声，首次点击/按键时启动背景音乐
+    function unlockAudio() {
+      Game.unlockAudio();
+      document.removeEventListener('pointerdown', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    }
+    document.addEventListener('pointerdown', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+    // 任意鼠标 / 触摸点击都播放一声轻提示音，跟随音效开关
+    document.addEventListener('pointerdown', function (ev) {
+      if (ev.button) return;
+      Game.unlockAudio();
+      Game.playClick();
+    }, true);
     Game.onEnd = handleGameEnd;
     Game.onLevelClear = saveLevelClear;
     Game.onWrongWord = addWrongWord;
