@@ -29,6 +29,12 @@
         <span class="brand-sub">英文打字闯关</span>
       </div>
       <div class="topbar-right">
+        <button class="icon-btn" id="pauseBtn" title="暂停（Esc）" aria-label="暂停">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="4" width="4" height="16" rx="1.4"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1.4"></rect>
+          </svg>
+        </button>
         <button class="icon-btn" id="settingsBtn" title="设置" aria-label="设置">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -166,15 +172,14 @@
       </div>
       <div class="hud-item hud-time"><span>剩余时间</span><b id="hudTime">50s</b></div>
       <div class="hud-group hud-group-ai" id="hudAiSide" hidden>
-        <div class="hud-item"><span>AI 状态</span><b class="hud-ai-state" id="hudAiStateVal">等待</b></div>
         <div class="hud-item"><span>AI 分数</span><b id="hudAiScoreVal">0</b></div>
-        <div class="hud-item"><span>AI 连击</span><b id="hudAiComboVal">0</b></div>
-        <div class="hud-item hud-hp hud-hp-ai">
+        <div class="hud-item hud-hp">
           <span>AI 生命</span>
           <div class="hearts" id="hudAiHearts" aria-label="AI 剩余生命 3 颗"></div>
         </div>
+        <div class="hud-item"><span>AI 连击</span><b id="hudAiComboVal">0</b></div>
+        <div class="hud-item hud-input"><span>AI 输入</span><b id="hudAiInput">—</b></div>
       </div>
-      <button class="btn ghost small" id="pauseBtn">暂停 Esc</button>
     </div>
 
     <div class="versus-bar" id="versusBar" hidden>

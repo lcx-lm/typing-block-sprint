@@ -179,6 +179,7 @@
       aiCombo: G.ai ? G.ai.combo : 0,
       aiLives: G.ai ? G.ai.lives : LIVES_MAX,
       aiState: G.ai ? G.ai.state : '等待',
+      aiInput: G.ai ? G.ai.typed : '',
       versusShare: G.versusShare,
       versusSide: G.versusSide,
       versusHold: G.versusHold

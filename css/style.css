@@ -216,22 +216,27 @@ body[data-state="RESULT"] .user-strip{display:none}
 /* ---------------- PLAYING HUD ---------------- */
 #screen-play{gap:10px}
 .hud{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:10px 18px;
   background:linear-gradient(180deg,#121b28,#0c121b);
   border:1px solid var(--line);border-radius:14px;padding:10px 14px;
 }
-.hud-item{display:flex;flex-direction:column;gap:2px;min-width:64px}
-.hud-item span{font-size:9.5px;letter-spacing:.14em;color:var(--dim2)}
+/* AI 对战才有右半区，左右两列等宽，时间正好落在正中 */
+.hud.is-versus{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.hud-item{display:flex;flex-direction:column;gap:2px;min-width:56px}
+.hud-item span{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);white-space:nowrap}
 .hud-item b{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
-/* AI 对战：顶部 HUD 左右分栏，左半全是我方信息、右半全是 AI 信息 */
-.hud-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
-.hud-group-player{flex:1}
-.hud-group-ai{flex:1;justify-content:flex-end}
-.hud-ai-state{font-size:14px;color:var(--acc)}
-.hud-hp{flex-direction:row;align-items:center;gap:9px;min-width:140px}
-.hud-hp span{width:26px}
-.hud-hp-ai span{width:auto;white-space:nowrap}
-.hearts{display:flex;align-items:center;gap:6px}
+/* AI 对战：左半全是我方信息、右半全是 AI 信息，两组等宽等距铺开形成镜像 */
+.hud-group{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:10px 14px;flex-wrap:wrap;min-width:0;
+}
+.hud-group-player{grid-column:1}
+.hud-group-ai{grid-column:3}
+.hud-group[hidden]{display:none}
+.hud-time{grid-column:2;align-items:center;text-align:center}
+.hud-hp{min-width:72px}
+.hearts{display:flex;align-items:center;gap:6px;height:20px}
 .heart{
   display:block;width:20px;height:20px;flex:0 0 auto;
   overflow:visible;transform-origin:50% 60%;
@@ -254,7 +259,7 @@ body[data-state="RESULT"] .user-strip{display:none}
   52%{transform:scale(.94) rotate(5deg);opacity:1}
   100%{transform:scale(.68) rotate(12deg);opacity:.55}
 }
-.hud-input{flex:1;min-width:140px}
+.hud-input{flex:0 1 auto;min-width:0;max-width:200px}
 .hud-time b{font-variant-numeric:tabular-nums}
 .hud-time b.is-low{color:var(--danger)}
 .hud-input b{
@@ -262,7 +267,9 @@ body[data-state="RESULT"] .user-strip{display:none}
   color:var(--acc);letter-spacing:2px;font-size:17px;font-weight:700;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-#pauseBtn{margin-left:auto}
+/* 暂停按钮放在顶栏，只在游戏中出现，避免挤占 HUD 的左右对称布局 */
+#pauseBtn{display:none}
+body[data-state="PLAYING"] #pauseBtn{display:flex}
 
 .game-area{
   position:relative;flex:1;
@@ -654,10 +661,16 @@ body[data-state="RESULT"] .user-strip{display:none}
   .app{padding:10px 12px 20px}
   .brand-sub{display:none}
   .brand-name{font-size:18px}
+  .hud{grid-template-columns:minmax(0,1fr) auto;gap:10px}
   .hud-item{min-width:52px}
-  .hud-hp{min-width:140px}
-  .hud-group-player{flex:1 1 auto}
-  .hud-group-ai{flex:1 1 100%;justify-content:flex-start}
+  .hud-hp{min-width:72px}
+  .hud-group-player{grid-column:1;justify-content:flex-start}
+  .hud-time{grid-column:2}
+  /* 窄屏放不下左右分栏：AI 信息整组换到第二行，用分隔线区分 */
+  .hud-group-ai{
+    grid-column:1 / -1;justify-content:space-between;
+    padding-top:10px;border-top:1px solid var(--line);
+  }
   .block-word{font-size:19px}
 
   .user-strip{gap:6px}

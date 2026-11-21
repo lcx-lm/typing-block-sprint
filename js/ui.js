@@ -65,16 +65,17 @@
       e.modalRoot = document.getElementById('modalRoot');
 
       e.hudScore = document.getElementById('hudScore');
+      e.hudBar = document.getElementById('hudBar');
       e.hudScoreLabel = document.getElementById('hudScoreLabel');
       e.hudLevel = document.getElementById('hudLevel');
       e.hudTarget = document.getElementById('hudTarget');
       e.hudLevelItem = document.getElementById('hudLevelItem');
       e.hudTargetItem = document.getElementById('hudTargetItem');
       e.hudAiSide = document.getElementById('hudAiSide');
-      e.hudAiStateVal = document.getElementById('hudAiStateVal');
       e.hudAiScoreVal = document.getElementById('hudAiScoreVal');
       e.hudAiComboVal = document.getElementById('hudAiComboVal');
       e.hudAiHearts = document.getElementById('hudAiHearts');
+      e.hudAiInput = document.getElementById('hudAiInput');
       e.hudTime = document.getElementById('hudTime');
       e.hudCombo = document.getElementById('hudCombo');
       e.hudInput = document.getElementById('hudInput');
@@ -139,6 +140,8 @@
       // 单机闯关按关卡独立计分，左上角只显示本关得分；其他模式显示整局总分
       var solo = d.mode === 'solo';
       var versus = d.mode === 'versus';
+      // 对战才切到三列（我方 | 时间 | AI），单机与冲刺保持两列，时间靠右
+      if (e.hudBar) e.hudBar.classList.toggle('is-versus', versus);
       e.hudScore.textContent = solo ? d.levelScore : d.score;
       if (e.hudScoreLabel) {
         e.hudScoreLabel.textContent = solo ? '本关分数' : (versus ? '我的分数' : '分数');
@@ -210,7 +213,7 @@
           e.hudAiComboVal.classList.toggle('is-hot', aiCombo >= 5);
         }
         this._aiCombo = aiCombo;
-        if (e.hudAiStateVal) e.hudAiStateVal.textContent = d.aiState || '等待';
+        if (e.hudAiInput) e.hudAiInput.textContent = d.aiInput ? d.aiInput : '—';
         this._aiLives = paintHearts(e.hudAiHearts, d.aiLives, this._aiLives, 'AI 剩余生命');
       }
 
