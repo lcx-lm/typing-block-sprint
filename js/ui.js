@@ -26,6 +26,27 @@
     }
   }
 
+  // 画一组爱心：失去的那颗变灰，并在刚失去时播放一次碎裂动画
+  function paintHearts(box, lives, prev, label) {
+    if (!box) return 3;
+    var cur = Math.max(0, Math.min(3, typeof lives === 'number' ? lives : 3));
+    var hearts = box.querySelectorAll('.heart');
+    for (var i = 0; i < hearts.length; i++) {
+      var lost = i >= cur;
+      hearts[i].classList.toggle('is-lost', lost);
+      // 新一局恢复的爱心要清掉上一局的碎裂动画残留
+      if (!lost) hearts[i].classList.remove('is-breaking');
+    }
+    if (cur < prev && hearts[cur]) {
+      var h = hearts[cur];
+      h.classList.remove('is-breaking');
+      void h.offsetWidth;
+      h.classList.add('is-breaking');
+    }
+    box.setAttribute('aria-label', label + ' ' + cur + ' 颗');
+    return cur;
+  }
+
   var UI = {
     els: {},
 
@@ -49,8 +70,11 @@
       e.hudTarget = document.getElementById('hudTarget');
       e.hudLevelItem = document.getElementById('hudLevelItem');
       e.hudTargetItem = document.getElementById('hudTargetItem');
-      e.hudAiItem = document.getElementById('hudAiItem');
-      e.hudAi = document.getElementById('hudAi');
+      e.hudAiSide = document.getElementById('hudAiSide');
+      e.hudAiStateVal = document.getElementById('hudAiStateVal');
+      e.hudAiScoreVal = document.getElementById('hudAiScoreVal');
+      e.hudAiComboVal = document.getElementById('hudAiComboVal');
+      e.hudAiHearts = document.getElementById('hudAiHearts');
       e.hudTime = document.getElementById('hudTime');
       e.hudCombo = document.getElementById('hudCombo');
       e.hudInput = document.getElementById('hudInput');
@@ -69,13 +93,20 @@
       e.aiState = document.getElementById('aiState');
       fillMiniHearts(e.playerMiniHearts);
       fillMiniHearts(e.aiMiniHearts);
+      // AI 爱心直接克隆玩家爱心的 SVG，避免重复写三份结构
+      var heartProto = e.hearts ? e.hearts.querySelector('.heart') : null;
+      if (heartProto && e.hudAiHearts) {
+        for (var hi = 0; hi < 3; hi++) e.hudAiHearts.appendChild(heartProto.cloneNode(true));
+      }
       this._lives = 3;
+      this._aiLives = 3;
       e.nickLabel = document.getElementById('nickLabel');
       e.homeBest = document.getElementById('homeBest');
       e.homeBestWpm = document.getElementById('homeBestWpm');
       e.homeTrend = document.getElementById('homeTrend');
       e.trendSum = document.getElementById('trendSum');
       this._combo = 0;
+      this._aiCombo = 0;
     },
 
     /* ---------------- 主题 ---------------- */
@@ -107,8 +138,11 @@
       var e = this.els;
       // 单机闯关按关卡独立计分，左上角只显示本关得分；其他模式显示整局总分
       var solo = d.mode === 'solo';
+      var versus = d.mode === 'versus';
       e.hudScore.textContent = solo ? d.levelScore : d.score;
-      if (e.hudScoreLabel) e.hudScoreLabel.textContent = solo ? '本关分数' : '分数';
+      if (e.hudScoreLabel) {
+        e.hudScoreLabel.textContent = solo ? '本关分数' : (versus ? '我的分数' : '分数');
+      }
       e.hudLevel.textContent = d.level + ' / ' + d.levelTotal;
       e.hudTarget.textContent = d.levelScore + ' / ' + d.levelTarget;
       e.hudTime.textContent = d.time + 's';
@@ -130,11 +164,10 @@
       // 单机闯关显示关卡与目标；冲刺 / AI 对战 / 错词复习隐藏
       if (e.hudLevelItem) e.hudLevelItem.hidden = !solo;
       if (e.hudTargetItem) e.hudTargetItem.hidden = !solo;
-      if (e.hudAiItem) e.hudAiItem.hidden = d.mode !== 'versus';
-      if (e.hudAi) e.hudAi.textContent = d.aiScore || 0;
+      // AI 对战：HUD 右半整组切换为 AI 信息，其他模式隐藏
+      if (e.hudAiSide) e.hudAiSide.hidden = !versus;
 
       // AI 对战：双跑道 + 拔河条
-      var versus = d.mode === 'versus';
       if (e.versusBar) e.versusBar.hidden = !versus;
       if (e.laneWrap) e.laneWrap.hidden = !versus;
       if (e.gameArea) e.gameArea.classList.toggle('is-versus', versus);
@@ -163,26 +196,26 @@
         paintMiniHearts(e.aiMiniHearts, Math.max(0, Math.min(3,
           typeof d.aiLives === 'number' ? d.aiLives : 3)));
         if (e.aiState) e.aiState.textContent = d.aiState || '等待';
+
+        // HUD 右侧 AI 信息组：分数、连击、爱心、状态
+        if (e.hudAiScoreVal) e.hudAiScoreVal.textContent = d.aiScore || 0;
+        var aiCombo = typeof d.aiCombo === 'number' ? d.aiCombo : 0;
+        if (e.hudAiComboVal) {
+          e.hudAiComboVal.textContent = aiCombo;
+          if (aiCombo > (this._aiCombo || 0) && aiCombo > 0) {
+            e.hudAiComboVal.classList.remove('is-bump');
+            void e.hudAiComboVal.offsetWidth;
+            e.hudAiComboVal.classList.add('is-bump');
+          }
+          e.hudAiComboVal.classList.toggle('is-hot', aiCombo >= 5);
+        }
+        this._aiCombo = aiCombo;
+        if (e.hudAiStateVal) e.hudAiStateVal.textContent = d.aiState || '等待';
+        this._aiLives = paintHearts(e.hudAiHearts, d.aiLives, this._aiLives, 'AI 剩余生命');
       }
 
       // 生命：3 颗爱心，失去的那颗变成灰色裂纹并播放碎裂动画
-      var lives = Math.max(0, Math.min(3, typeof d.lives === 'number' ? d.lives : 3));
-      var hearts = e.hearts ? e.hearts.querySelectorAll('.heart') : [];
-      var i;
-      for (i = 0; i < hearts.length; i++) {
-        var lost = i >= lives;
-        hearts[i].classList.toggle('is-lost', lost);
-        // 新一局恢复的爱心要清掉上一局的碎裂动画残留
-        if (!lost) hearts[i].classList.remove('is-breaking');
-      }
-      if (lives < this._lives && hearts[lives]) {
-        var h = hearts[lives];
-        h.classList.remove('is-breaking');
-        void h.offsetWidth;
-        h.classList.add('is-breaking');
-      }
-      this._lives = lives;
-      if (e.hearts) e.hearts.setAttribute('aria-label', '剩余生命 ' + lives + ' 颗');
+      this._lives = paintHearts(e.hearts, d.lives, this._lives, '剩余生命');
     },
 
     updateNickname: function (name) {

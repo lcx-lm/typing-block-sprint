@@ -176,6 +176,7 @@
       time: Math.ceil(G.levelTime),
       mode: G.mode,
       aiScore: Math.round(G.aiScore),
+      aiCombo: G.ai ? G.ai.combo : 0,
       aiLives: G.ai ? G.ai.lives : LIVES_MAX,
       aiState: G.ai ? G.ai.state : '等待',
       versusShare: G.versusShare,

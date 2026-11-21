@@ -139,31 +139,41 @@
 
   <!-- ==================== PLAYING ==================== -->
   <section class="screen" id="screen-play">
-    <div class="hud">
-      <div class="hud-item"><span id="hudScoreLabel">分数</span><b id="hudScore">0</b></div>
-      <div class="hud-item" id="hudLevelItem"><span>关卡</span><b id="hudLevel">1 / 6</b></div>
-      <div class="hud-item" id="hudTargetItem"><span>本关目标</span><b id="hudTarget">0 / 100</b></div>
-      <div class="hud-item" id="hudAiItem" hidden><span>AI 对手</span><b id="hudAi">0</b></div>
+    <div class="hud" id="hudBar">
+      <div class="hud-group hud-group-player">
+        <div class="hud-item"><span id="hudScoreLabel">分数</span><b id="hudScore">0</b></div>
+        <div class="hud-item" id="hudLevelItem"><span>关卡</span><b id="hudLevel">1 / 6</b></div>
+        <div class="hud-item" id="hudTargetItem"><span>本关目标</span><b id="hudTarget">0 / 100</b></div>
+        <div class="hud-item hud-hp">
+          <span>生命</span>
+          <div class="hearts" id="hudHearts" aria-label="剩余生命 3 颗">
+            <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+            </svg>
+            <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+            </svg>
+            <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="hud-item"><span>连击</span><b id="hudCombo">0</b></div>
+        <div class="hud-item hud-input"><span>当前输入</span><b id="hudInput">—</b></div>
+      </div>
       <div class="hud-item hud-time"><span>剩余时间</span><b id="hudTime">50s</b></div>
-      <div class="hud-item hud-hp">
-        <span>生命</span>
-        <div class="hearts" id="hudHearts" aria-label="剩余生命 3 颗">
-          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
-            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
-          </svg>
-          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
-            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
-          </svg>
-          <svg class="heart" viewBox="0 0 24 24" aria-hidden="true">
-            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            <path class="heart-crack" d="M12 6.5l-1.6 4.4 2.9 2-1.9 4.5"/>
-          </svg>
+      <div class="hud-group hud-group-ai" id="hudAiSide" hidden>
+        <div class="hud-item"><span>AI 状态</span><b class="hud-ai-state" id="hudAiStateVal">等待</b></div>
+        <div class="hud-item"><span>AI 分数</span><b id="hudAiScoreVal">0</b></div>
+        <div class="hud-item"><span>AI 连击</span><b id="hudAiComboVal">0</b></div>
+        <div class="hud-item hud-hp hud-hp-ai">
+          <span>AI 生命</span>
+          <div class="hearts" id="hudAiHearts" aria-label="AI 剩余生命 3 颗"></div>
         </div>
       </div>
-      <div class="hud-item"><span>连击</span><b id="hudCombo">0</b></div>
-      <div class="hud-item hud-input"><span>当前输入</span><b id="hudInput">—</b></div>
       <button class="btn ghost small" id="pauseBtn">暂停 Esc</button>
     </div>
 

@@ -223,8 +223,14 @@ body[data-state="RESULT"] .user-strip{display:none}
 .hud-item{display:flex;flex-direction:column;gap:2px;min-width:64px}
 .hud-item span{font-size:9.5px;letter-spacing:.14em;color:var(--dim2)}
 .hud-item b{font-size:17px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
+/* AI 对战：顶部 HUD 左右分栏，左半全是我方信息、右半全是 AI 信息 */
+.hud-group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.hud-group-player{flex:1}
+.hud-group-ai{flex:1;justify-content:flex-end}
+.hud-ai-state{font-size:14px;color:var(--acc)}
 .hud-hp{flex-direction:row;align-items:center;gap:9px;min-width:140px}
 .hud-hp span{width:26px}
+.hud-hp-ai span{width:auto;white-space:nowrap}
 .hearts{display:flex;align-items:center;gap:6px}
 .heart{
   display:block;width:20px;height:20px;flex:0 0 auto;
@@ -650,6 +656,8 @@ body[data-state="RESULT"] .user-strip{display:none}
   .brand-name{font-size:18px}
   .hud-item{min-width:52px}
   .hud-hp{min-width:140px}
+  .hud-group-player{flex:1 1 auto}
+  .hud-group-ai{flex:1 1 100%;justify-content:flex-start}
   .block-word{font-size:19px}
 
   .user-strip{gap:6px}
