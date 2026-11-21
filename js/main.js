@@ -993,7 +993,8 @@
       } else {
         why = '时间到，比分落后';
       }
-      status.textContent = 'AI 对战 · ' + why;
+      // 主动退出时结果页大字已经是「失败」，状态行不再重复模式名
+      status.textContent = stats.failReason === 'quit' ? why : 'AI 对战 · ' + why;
       winView = vsWinner === 'player';
     } else {
       var lvText = '第 ' + stats.levelIndex + ' / ' + stats.levelTotal + ' 关';
